@@ -102,6 +102,45 @@ TTS_SCRIPT_PATH=tts.py
 
 > 说明：项目使用 Spring Dotenv 自动加载 `.env` 文件；如果不想使用 `.env`，也可以直接在环境变量里注入相同配置。
 
+
+
+## 下载本地 Sherpa-ONNX 模型
+
+`models/` 已在 `.gitignore` 中忽略，因此克隆项目后需要自行下载模型。项目使用的模型是 Sherpa-ONNX 英文流式 Zipformer：
+
+- 官方模型归档：[sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2](https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2)
+- 官方模型说明：[Streaming Zipformer models](https://k2-fsa.github.io/sherpa/onnx/streaming/zipformer-models.html)
+
+下载完整归档并解压到项目根目录的 `models/`。Windows PowerShell（需要系统提供 `tar`，Windows 10/11 通常自带）：
+
+```powershell
+New-Item -ItemType Directory -Force models | Out-Null
+$archive = Join-Path $env:TEMP 'sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2'
+Invoke-WebRequest -Uri 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2' -OutFile $archive
+tar -xjf $archive -C models
+```
+
+Linux 或 macOS：
+
+```bash
+mkdir -p models
+curl -L 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2' -o /tmp/sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2
+tar -xjf /tmp/sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2 -C models
+```
+
+解压后应能看到以下结构（不要多嵌套一层同名目录）：
+
+```text
+models/
+└── sherpa-onnx-streaming-zipformer-en-2023-02-21/
+	├── decoder-epoch-99-avg-1.int8.onnx
+	├── encoder-epoch-99-avg-1.int8.onnx
+	├── joiner-epoch-99-avg-1.int8.onnx
+	└── tokens.txt
+```
+
+**运行说明：**当前版本的 `/ws/audio` 和 `/ws/asr-test` 使用 DashScope `paraformer-realtime-v2` 进行语音识别，代码尚未加载上述本地 ONNX 模型。因此，下载模型是为项目保留的本地模型文件准备步骤，并不是当前启动应用的必要条件；要让当前语音识别正常工作，仍需配置有效的 `DASHSCOPE_API_KEY` 和可用网络。其余环境变量及启动方式见上文“运行前准备”和“启动项目”。
+
 ## 启动项目
 
 在项目根目录执行：
