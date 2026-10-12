@@ -141,7 +141,7 @@ models/
 	└── tokens.txt
 ```
 
-**运行说明：**当前版本的 `/ws/audio` 和 `/ws/asr-test` 使用 DashScope `paraformer-realtime-v2` 进行语音识别，代码尚未加载上述本地 ONNX 模型。因此，下载模型是为项目保留的本地模型文件准备步骤，并不是当前启动应用的必要条件；要让当前语音识别正常工作，仍需配置有效的 `DASHSCOPE_API_KEY` 和可用网络。其余环境变量及启动方式见上文“运行前准备”和“启动项目”。
+**运行说明：**当前版本的 `/ws/audio` 和 `/ws/asr-test` 主要使用免费的 DashScope `paraformer-realtime-v2` 进行语音识别，要让当前语音识别正常工作，需配置有效的 `DASHSCOPE_API_KEY` 和可用网络。Sherpa - ONNX是项目初期采用的主力识别模型，现为转辅助作用，不下载亦可使用项目功能。其余环境变量及启动方式见上文“运行前准备”和“启动项目”。
 
 ## 启动项目
 
