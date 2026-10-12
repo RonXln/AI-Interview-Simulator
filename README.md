@@ -1,30 +1,32 @@
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 # AI Interview Simulator
 
-这是一个基于 Spring Boot 的实时语音面试模拟器，集成了:
+A real-time voice interview simulator built with Spring Boot, integrating:
 
-- WebSocket 实时音频通道
-- 阿里云 DashScope 语音识别（ASR）
-- DeepSeek 大语言模型驱动的面试流程
-- Microsoft Edge TTS 语音合成
-- 面试中断、沉默检测、抢占和连续对话控制
-- 本地部署的辅助语音识别模型sherpa-onnx-v1.12.32
+- A WebSocket real-time audio channel
+- Alibaba Cloud DashScope speech recognition (ASR)
+- Interview workflows powered by the DeepSeek large language model
+- Microsoft Edge TTS speech synthesis
+- Interview interruption, silence detection, preemption, and continuous-dialogue control
+- The locally deployed sherpa-onnx-v1.12.32 auxiliary speech recognition model
 
-它适合用于 AI 面试官 / AI 候选人 / 多角色模拟面试场景，支持单面或群面（小组面试）式对话体验。
+It is designed for AI interviewer, AI candidate, and multi-role mock interview scenarios, and supports both one-on-one and group interview-style conversations.
 
 <img width="2728" height="1558" alt="fe00271b00cb27eac9e000e4edfa53b3" src="https://github.com/user-attachments/assets/c721159e-1837-4a13-9876-3cd2b50adf1a" />
 
-## 项目概览
+## Project Overview
 
-该项目主要用于模拟真实面试场景，用户通过音频与系统进行交互，系统会：
+The project simulates real interview scenarios in which users interact with the system through audio. The system:
 
-1. 接收麦克风音频
-2. 实时识别用户语音
-3. 把识别结果交给 LLM 生成下一轮面试回应
-4. 通过 TTS 生成语音并播放，由TTS根据后台发出的指示信号扮演面试官或其它候选人
-5. 根据上下文判断是否需要打断、切换问题、结束面试
-6. 流程结束后给出关于语言表现和流畅度表现方面的反馈
+1. Receives microphone audio.
+2. Recognizes the user's speech in real time.
+3. Sends the recognition results to an LLM to generate the next interview response.
+4. Generates and plays speech through TTS, which voices the interviewer or other candidates based on instructions from the backend.
+5. Uses the conversation context to determine whether to interrupt, switch questions, or end the interview.
+6. Provides feedback on language performance and fluency when the session ends.
 
-## 技术栈
+## Technology Stack
 
 - Java 17
 - Spring Boot 3.2.4
@@ -33,9 +35,9 @@
 - DeepSeek API
 - DashScope Paraformer-Realtime-v2 ASR
 - Python + Edge TTS
-- Local ONNX models for speech pipeline
+- Local ONNX models for the speech pipeline
 
-## 目录结构
+## Directory Structure
 
 ```text
 .
@@ -59,35 +61,35 @@
 └── README.md
 ```
 
-## 运行前准备
+## Prerequisites
 
-### 1. 安装 Java
+### 1. Install Java
 
-确保已安装 JDK 17，建议使用 OpenJDK 17 或 Temurin 17。
+Make sure JDK 17 is installed. OpenJDK 17 or Temurin 17 is recommended.
 
 ```bash
 java -version
 ```
 
-### 2. 安装 Python 及依赖
+### 2. Install Python and its dependencies
 
-项目中的 TTS 依赖 Python 脚本 `tts.py`，需要安装 `edge-tts`。
+The project's TTS relies on the Python script `tts.py` and requires `edge-tts`.
 
 ```bash
 python -m pip install edge-tts
 ```
 
-如果需要使用其他 Python 解释器，也可在 `.env` 中配置 `TTS_PYTHON_CMD`。
+If you want to use a different Python interpreter, set `TTS_PYTHON_CMD` in `.env`.
 
-### 3. 配置环境变量
+### 3. Configure environment variables
 
-复制示例文件：
+Copy the example file:
 
 ```bash
 copy .env.example .env
 ```
 
-然后填写真实密钥和配置：
+Then add your actual keys and configuration:
 
 ```env
 DEEPSEEK_API_KEY=your_deepseek_key
@@ -102,18 +104,18 @@ TTS_PYTHON_CMD=python
 TTS_SCRIPT_PATH=tts.py
 ```
 
-> 说明：项目使用 Spring Dotenv 自动加载 `.env` 文件；如果不想使用 `.env`，也可以直接在环境变量里注入相同配置。
+> Note: The project uses Spring Dotenv to load the `.env` file automatically. If you do not want to use `.env`, you can provide the same values directly as environment variables.
 
 
 
-## 下载本地 Sherpa-ONNX 模型
+## Download the Local Sherpa-ONNX Model
 
-`models/` 已在 `.gitignore` 中忽略，因此克隆项目后需要自行下载模型。项目使用的模型是 Sherpa-ONNX 英文流式 Zipformer：
+The entire `models/` directory is ignored by `.gitignore`, so you need to download the model after cloning the repository. The model used by the project is the Sherpa-ONNX streaming English Zipformer:
 
-- 官方模型归档：[sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2](https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2)
-- 官方模型说明：[Streaming Zipformer models](https://k2-fsa.github.io/sherpa/onnx/streaming/zipformer-models.html)
+- Official model archive: [sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2](https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2)
+- Official model documentation: [Streaming Zipformer models](https://k2-fsa.github.io/sherpa/onnx/streaming/zipformer-models.html)
 
-下载完整归档并解压到项目根目录的 `models/`。Windows PowerShell（需要系统提供 `tar`，Windows 10/11 通常自带）：
+Download the complete archive and extract it into the `models/` directory at the project root. Windows PowerShell (requires `tar`, which is usually included with Windows 10/11):
 
 ```powershell
 New-Item -ItemType Directory -Force models | Out-Null
@@ -122,15 +124,16 @@ Invoke-WebRequest -Uri 'https://github.com/k2-fsa/sherpa-onnx/releases/download/
 tar -xjf $archive -C models
 ```
 
-Linux 或 macOS：
+Linux or macOS:
 
 ```bash
 mkdir -p models
 curl -L 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2' -o /tmp/sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2
 tar -xjf /tmp/sherpa-onnx-streaming-zipformer-en-2023-02-21.tar.bz2 -C models
+
 ```
 
-解压后应能看到以下结构（不要多嵌套一层同名目录）：
+After extraction, the directory should have this structure (there should not be an extra nested directory with the same name):
 
 ```text
 models/
@@ -141,67 +144,67 @@ models/
 	└── tokens.txt
 ```
 
-**运行说明：**当前版本的 `/ws/audio` 和 `/ws/asr-test` 主要使用免费的 DashScope `paraformer-realtime-v2` 进行语音识别，要让当前语音识别正常工作，需配置有效的 `DASHSCOPE_API_KEY` 和可用网络。Sherpa - ONNX是项目初期采用的主力识别模型，现为转辅助作用，不下载亦可使用项目功能。其余环境变量及启动方式见上文“运行前准备”和“启动项目”。
+**Runtime note:** The current `/ws/audio` and `/ws/asr-test` endpoints primarily use the free DashScope `paraformer-realtime-v2` service for speech recognition. To use speech recognition with the current application, configure a valid `DASHSCOPE_API_KEY` and ensure network access. Sherpa-ONNX was the primary recognition model during the project's early development and now serves as an auxiliary model; it is not required to use the project. See “Prerequisites” and “Start the Application” for the remaining environment variables and startup instructions.
 
-## 启动项目
+## Start the Application
 
-在项目根目录执行：
+Run the following command from the project root:
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-Windows PowerShell 下可使用：
+On Windows PowerShell, use:
 
 ```powershell
 mvnw.cmd spring-boot:run
 ```
 
-启动后，应用默认监听：
+By default, the application listens at:
 
 ```text
 http://localhost:8081
 ```
 
-## WebSocket 接口
+## WebSocket Endpoints
 
-项目注册了两个 WebSocket 端点：
+The project registers two WebSocket endpoints:
 
-- `/ws/audio`：主面试通道，接收实时音频流并进行 ASR + LLM + TTS
-- `/ws/asr-test`：纯 ASR 测试通道，用于识别测试而不进 LLM/TTS
+- `/ws/audio`: The main interview channel. Receives real-time audio and runs ASR + LLM + TTS.
+- `/ws/asr-test`: An ASR-only test channel for recognition testing without LLM or TTS.
 
-## 主要配置项
+## Main Configuration
 
-配置文件位于：
+The configuration file is located at:
 
 - `src/main/resources/application.properties`
 
-这些配置项包括：
+It contains settings including:
 
 - `server.port=8081`
-- LLM 的 `deepseek.*`
-- ASR 的 `dashscope.*` 和 `asr.*`
-- 语音暂停/打断检测相关参数
-- group / single 面试的静默检测阈值
-- speculative LLM 和 interrupt 机制参数
+- LLM settings under `deepseek.*`
+- ASR settings under `dashscope.*` and `asr.*`
+- Speech-pause and interruption detection parameters
+- Silence-detection thresholds for group and one-on-one interviews
+- Speculative LLM and interruption mechanism parameters
 
-## 核心模块说明
+## Core Modules
 
 ### `LLMService`
 
-负责与 DeepSeek API 通信，生成面试官 / 候选人回应，并维护每个会话的上下文历史。
+Communicates with the DeepSeek API to generate interviewer and candidate responses, and maintains conversation history for each session.
 
 ### `ASRService`
 
-负责构建 DashScope ASR 参数，控制识别模型、语言、静默阈值等。
+Builds DashScope ASR parameters and controls the recognition model, language, silence threshold, and related settings.
 
 ### `AudioHandler`
 
-处理实时音频数据流，负责将音频流送入 ASR，并在识别完成后驱动 LLM 和 TTS。
+Processes the real-time audio stream, sends it to ASR, and drives the LLM and TTS after recognition is complete.
 
 ### `tts.py`
 
-Python 脚本，通过 Edge TTS 生成各个角色的语音，例如：
+This Python script uses Edge TTS to generate speech for roles such as:
 
 - `ProfA`
 - `ProfB`
@@ -211,45 +214,45 @@ Python 脚本，通过 Edge TTS 生成各个角色的语音，例如：
 - `David`
 - `Emma`
 
-## 典型使用流程
+## Typical Workflow
 
-1. 浏览器或客户端连接 `/ws/audio`
-2. 语音输入开始
-3. ASR 实时识别用户话语
-4. 识别结果发送给 LLM
-5. LLM 根据面试流程生成回复
-6. 回复被转成语音并播放
-7. 继续迭代直到面试结束或被中断
+1. A browser or client connects to `/ws/audio`.
+2. Voice input begins.
+3. ASR recognizes the user's speech in real time.
+4. The recognition results are sent to the LLM.
+5. The LLM generates a response based on the interview flow.
+6. The response is converted to speech and played.
+7. The cycle continues until the interview ends or is interrupted.
 
-## 常见问题
+## FAQ
 
-### 1. 启动时报 `DASHSCOPE_API_KEY 未配置`
+### 1. Startup reports `DASHSCOPE_API_KEY` is not configured
 
-检查 `.env` 中是否已填入 `DASHSCOPE_API_KEY`，或确保系统环境变量已注入。
+Check that `DASHSCOPE_API_KEY` is set in `.env` or provided as a system environment variable.
 
-### 2. TTS 生成失败
+### 2. TTS generation fails
 
-确认已安装：
+Make sure it is installed:
 
 ```bash
 python -m pip install edge-tts
 ```
 
-并确认 `TTS_PYTHON_CMD` 和 `TTS_SCRIPT_PATH` 配置正确。
+Also verify that `TTS_PYTHON_CMD` and `TTS_SCRIPT_PATH` are configured correctly.
 
-### 3. 语音识别效果不理想
+### 3. Speech recognition results are unsatisfactory
 
-可以调整：
+You can adjust:
 
 - `asr.max-sentence-silence`
 - `asr.language`
 - `interrupt.*`
 - `silence.*`
 
-这些参数都集中在 `application.properties` 中。
+These parameters are all in `application.properties`.
 
-## 其它
+## Other Notes
 
-- 本项目偏实验性和演示型，适合 AI 语音面试、实时人机交互原型验证。
-- 代码中包含较多面试控制逻辑，如发言节奏、打断预算、沉默处理等，但皆为实验性功能，目前实际运行中仍有诸多问题待解决（如前端可能会多个音频同时发声或未在指定时间发声，推测是队列冲突问题，目前仍在排查）
-- 采用了高频率切片的流式输入和输出设计来尝试降低延迟，但仍可能在上下文过于复杂时遇到延迟大幅度波动情况
+- This project is experimental and intended for AI voice interviews and real-time human-computer interaction prototypes.
+- The code includes substantial interview-control logic, such as speaking cadence, interruption budgets, and silence handling. These features are experimental, and various issues remain (for example, the frontend may play multiple audio streams at once or fail to play audio at the expected time; a queue conflict is suspected and is still being investigated).
+- The project uses high-frequency input and output chunking to try to reduce latency, but latency can still fluctuate significantly when the context becomes too complex.
