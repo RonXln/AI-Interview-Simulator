@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoom - 等待室</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: #232323;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    color: #fff;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    height: 48px;
+    background: #1c1c1c;
+    border-bottom: 1px solid #2d2d2d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .logo-icon {
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #2d8cff 0%, #0b5cdb 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+  }
+
+  .logo-text {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .header-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+  }
+
+  .header-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Main content */
+  .main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 40px 20px;
+  }
+
+  /* Video preview */
+  .video-preview-container {
+    width: 640px;
+    max-width: 90vw;
+    aspect-ratio: 16/9;
+    background: #2d2d2d;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 32px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .video-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: none;
+  }
+
+  .video-preview.active {
+    display: block;
+  }
+
+  .video-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: 500;
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+
+  .your-name {
+    font-size: 20px;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  /* Preview controls */
+  .preview-controls {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    background: rgba(0,0,0,0.75);
+    padding: 10px 16px;
+    border-radius: 32px;
+    backdrop-filter: blur(10px);
+  }
+
+  .preview-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .preview-btn svg {
+    width: 22px;
+    height: 22px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .preview-btn-mic {
+    background: rgba(255,255,255,0.15);
+  }
+
+  .preview-btn-mic:hover {
+    background: rgba(255,255,255,0.25);
+  }
+
+  .preview-btn-mic.off {
+    background: #e74c3c;
+  }
+
+  .preview-btn-mic.off:hover {
+    background: #c0392b;
+  }
+
+  .preview-btn-video {
+    background: rgba(255,255,255,0.15);
+  }
+
+  .preview-btn-video:hover {
+    background: rgba(255,255,255,0.25);
+  }
+
+  .preview-btn-video.off {
+    background: #e74c3c;
+  }
+
+  .preview-btn-video.off:hover {
+    background: #c0392b;
+  }
+
+  /* Waiting message */
+  .waiting-message {
+    text-align: center;
+    max-width: 500px;
+    margin-bottom: 24px;
+  }
+
+  .waiting-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #fff;
+  }
+
+  .waiting-subtitle {
+    font-size: 15px;
+    color: #aaa;
+    line-height: 1.6;
+  }
+
+  .meeting-info {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 16px 24px;
+    margin-bottom: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .meeting-info-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(45,140,255,0.15);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .meeting-info-icon svg {
+    width: 20px;
+    height: 20px;
+    color: #2d8cff;
+  }
+
+  .meeting-info-text {
+    text-align: left;
+  }
+
+  .meeting-info-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+
+  .meeting-info-value {
+    font-size: 15px;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  /* Loading animation */
+  .loading-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    opacity: 0.7;
+  }
+
+  .loading-dots {
+    display: flex;
+    gap: 6px;
+  }
+
+  .loading-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2d8cff;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  .loading-dot:nth-child(1) { animation-delay: 0s; }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+
+  .loading-text {
+    font-size: 13px;
+    color: #888;
+  }
+
+  /* Settings panel */
+  .settings-panel {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .settings-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .settings-btn:hover {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+  }
+
+  .settings-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Audio/Video settings dropdown (simulated) */
+  .dropdown-menu {
+    position: absolute;
+    bottom: 60px;
+    right: 0;
+    width: 280px;
+    background: #2d2d2d;
+    border: 1px solid #3d3d3d;
+    border-radius: 12px;
+    padding: 8px;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+
+  .dropdown-menu.show {
+    display: block;
+  }
+
+  .dropdown-section {
+    padding: 8px 0;
+    border-bottom: 1px solid #3d3d3d;
+  }
+
+  .dropdown-section:last-child {
+    border-bottom: none;
+  }
+
+  .dropdown-label {
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 12px;
+    margin-bottom: 4px;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .dropdown-item:hover {
+    background: rgba(255,255,255,0.08);
+  }
+
+  .dropdown-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dropdown-item-icon {
+    width: 16px;
+    height: 16px;
+    color: #aaa;
+  }
+
+  .dropdown-item-text {
+    font-size: 13px;
+    color: #ddd;
+  }
+
+  .dropdown-item-check {
+    width: 16px;
+    height: 16px;
+    color: #2d8cff;
+    display: none;
+  }
+
+  .dropdown-item.selected .dropdown-item-check {
+    display: block;
+  }
+
+  .test-speaker-btn {
+    margin-top: 8px;
+    width: 100%;
+    padding: 8px;
+    background: rgba(45,140,255,0.15);
+    border: 1px solid rgba(45,140,255,0.3);
+    border-radius: 6px;
+    color: #2d8cff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .test-speaker-btn:hover {
+    background: rgba(45,140,255,0.25);
+  }
+
+  /* Virtual background indicator */
+  .vbg-indicator {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    background: rgba(0,0,0,0.6);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #fff;
+    display: none;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .vbg-indicator.active {
+    display: flex;
+  }
+
+  .vbg-indicator svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Network status */
+  .network-status {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(0,0,0,0.6);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .network-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 12px;
+  }
+
+  .network-bar {
+    width: 3px;
+    background: #2baa2b;
+    border-radius: 1px;
+  }
+
+  .network-bar:nth-child(1) { height: 4px; }
+  .network-bar:nth-child(2) { height: 7px; }
+  .network-bar:nth-child(3) { height: 10px; }
+  .network-bar:nth-child(4) { height: 12px; }
+
+  /* Name input (for editing name) */
+  .name-edit {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.8);
+    padding: 12px 16px;
+    border-radius: 8px;
+  }
+
+  .name-edit.show {
+    display: flex;
+  }
+
+  .name-input {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    width: 200px;
+  }
+
+  .name-input:focus {
+    border-color: #2d8cff;
+    background: rgba(255,255,255,0.15);
+  }
+
+  .name-edit-btn {
+    background: #2d8cff;
+    border: none;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+
+  .name-edit-btn:hover {
+    background: #0b5cdb;
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(0,0,0,0.9);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .toast-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .video-preview-container {
+      width: 100%;
+      margin-bottom: 24px;
+    }
+
+    .waiting-title {
+      font-size: 20px;
+    }
+
+    .waiting-subtitle {
+      font-size: 14px;
+    }
+
+    .settings-panel {
+      bottom: 10px;
+      right: 10px;
+    }
+  }
+
+  /* Animation for entrance */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .video-preview-container {
+    animation: fadeInUp 0.6s ease-out;
+  }
+
+  .waiting-message {
+    animation: fadeInUp 0.6s ease-out 0.2s backwards;
+  }
+
+  .meeting-info {
+    animation: fadeInUp 0.6s ease-out 0.3s backwards;
+  }
+
+  .loading-indicator {
+    animation: fadeInUp 0.6s ease-out 0.4s backwards;
+  }
+
+  /* Modal dialog for admission */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.show {
+    display: flex;
+  }
+
+  .modal-dialog {
+    background: #1c1c1c;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .modal-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(45, 140, 255, 0.2);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2d8cff;
+    font-size: 18px;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .modal-content {
+    font-size: 14px;
+    color: #ccc;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .modal-buttons {
+    display: flex;
+    gap: 12px;
+  }
+
+  .modal-btn {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .modal-btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+  }
+
+  .modal-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+
+  .modal-btn-confirm {
+    background: #2d8cff;
+    color: #fff;
+  }
+
+  .modal-btn-confirm:hover {
+    background: #0b5cdb;
+  }
+
+  .modal-btn-confirm:active {
+    background: #0a4ab8;
+  }
+</style>
+</head>
+<body>
+
+<!-- Toast notification -->
+<div class="toast" id="toast">
+  <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+    <polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+  <span id="toastText">设置已保存</span>
+</div>
+
+<!-- Admission Modal -->
+<div class="modal-overlay" id="admissionModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="modal-icon">✓</div>
+      <div class="modal-title">您已被允许进入会议</div>
+    </div>
+    <div class="modal-content">
+      主持人已批准您的入席申请。是否现在加入会议？
+    </div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-cancel" onclick="cancelJoinMeeting()">取消</button>
+      <button class="modal-btn modal-btn-confirm" onclick="confirmJoinMeeting()">确定加入</button>
+    </div>
+  </div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">Z</div>
+    <div class="logo-text">ZOOM</div>
+  </div>
+  <div class="header-actions">
+    <button class="header-btn" onclick="showToast('帮助中心')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      帮助
+    </button>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="main-content">
+  <!-- Network status -->
+  <div class="network-status">
+    <div class="network-bars">
+      <div class="network-bar"></div>
+      <div class="network-bar"></div>
+      <div class="network-bar"></div>
+      <div class="network-bar"></div>
+    </div>
+    <span>网络良好</span>
+  </div>
+
+  <!-- Video preview -->
+  <div class="video-preview-container">
+    <!-- Virtual background indicator -->
+    <div class="vbg-indicator" id="vbgIndicator">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      虚拟背景已开启
+    </div>
+
+    <video class="video-preview" id="videoPreview" autoplay muted playsinline></video>
+    <div class="video-placeholder" id="videoPlaceholder">
+      <div class="avatar-large">我</div>
+      <div class="your-name" id="displayName">我</div>
+    </div>
+
+    <!-- Preview controls -->
+    <div class="preview-controls">
+      <button class="preview-btn preview-btn-mic off" id="micBtn" onclick="toggleMic()" title="静音">
+        <svg id="micIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+          <path d="M12 1a4 4 0 014 4v4a4 4 0 01-8 0V5a4 4 0 014-4z"/>
+          <path d="M18 10a6 6 0 01-12 0"/>
+          <line x1="12" y1="16" x2="12" y2="21"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+        </svg>
+        <svg id="micIconOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="1" y1="1" x2="23" y2="23" stroke-width="2.5"/>
+          <path d="M12 1a4 4 0 014 4v4" />
+          <path d="M16 9v0a4 4 0 01-4 4h0a4 4 0 01-4-4V7"/>
+          <path d="M18 10a6 6 0 01-12 0"/>
+          <line x1="12" y1="16" x2="12" y2="21"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+        </svg>
+      </button>
+
+      <button class="preview-btn preview-btn-video off" id="videoBtn" onclick="toggleVideo()" title="开启视频">
+        <svg id="videoIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+          <rect x="2" y="5" width="15" height="13" rx="2"/>
+          <polygon points="23,7 17,11 23,15"/>
+        </svg>
+        <svg id="videoIconOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="1" y1="1" x2="23" y2="23" stroke-width="2.5"/>
+          <path d="M16 7v4M2 5h0a2 2 0 012-2h11a2 2 0 012 2v0"/>
+          <path d="M17 18H4a2 2 0 01-2-2v-3"/>
+          <polygon points="23,7 17,11 23,15"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Name edit form -->
+    <div class="name-edit" id="nameEdit">
+      <input type="text" class="name-input" id="nameInput" placeholder="输入您的姓名" value="张伟">
+      <button class="name-edit-btn" onclick="saveName()">确定</button>
+    </div>
+  </div>
+
+  <!-- Waiting message -->
+  <div class="waiting-message">
+    <h1 class="waiting-title">请等待主持人允许您进入会议</h1>
+    <p class="waiting-subtitle">欢迎使用由Periagoge提供的语音服务！我们正在为你准备面试。<br>主持人将很快让您进入会议。会议开始前，请检查您的音频和视频设置。</p>
+  </div>
+
+  <!-- Meeting info -->
+  <div class="meeting-info">
+    <div class="meeting-info-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+    </div>
+    <div class="meeting-info-text">
+      <div class="meeting-info-label">会议主题</div>
+      <div class="meeting-info-value">Mock interview</div>
+    </div>
+  </div>
+
+  <!-- Loading indicator -->
+  <div class="loading-indicator">
+    <div class="loading-dots">
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+      <div class="loading-dot"></div>
+    </div>
+    <span class="loading-text">正在连接到会议...</span>
+  </div>
+
+  <!-- Settings panel -->
+  <div class="settings-panel">
+    <button class="settings-btn" onclick="toggleAudioSettings()" title="音频设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M15.54 8.46a5 5 0 010 7.07"/>
+        <path d="M19.07 4.93a10 10 0 010 14.14"/>
+      </svg>
+    </button>
+    <button class="settings-btn" onclick="toggleVideoSettings()" title="视频设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="5" width="15" height="13" rx="2"/>
+        <polygon points="23,7 17,11 23,15"/>
+      </svg>
+    </button>
+    <button class="settings-btn" onclick="editName()" title="编辑姓名">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+    </button>
+    <button class="settings-btn" onclick="showToast('通用设置')" title="设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  // State
+  let isMuted = true;
+  let isVideoOff = true;
+  let mediaStream = null;
+  let userName = '我';
+
+  // Show toast
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    const toastText = document.getElementById('toastText');
+    toastText.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+  }
+
+  // Toggle microphone
+  function toggleMic() {
+    isMuted = !isMuted;
+    const btn = document.getElementById('micBtn');
+    const iconOn = document.getElementById('micIconOn');
+    const iconOff = document.getElementById('micIconOff');
+
+    if (isMuted) {
+      btn.classList.add('off');
+      iconOn.style.display = 'none';
+      iconOff.style.display = 'block';
+      showToast('麦克风已静音');
+    } else {
+      btn.classList.remove('off');
+      iconOn.style.display = 'block';
+      iconOff.style.display = 'none';
+      showToast('麦克风已开启');
+    }
+  }
+
+  // Toggle video
+  async function toggleVideo() {
+    isVideoOff = !isVideoOff;
+    const btn = document.getElementById('videoBtn');
+    const iconOn = document.getElementById('videoIconOn');
+    const iconOff = document.getElementById('videoIconOff');
+    const videoEl = document.getElementById('videoPreview');
+    const placeholder = document.getElementById('videoPlaceholder');
+
+    if (!isVideoOff) {
+      // Turn on camera
+      try {
+        // ⚠️ mediaDevices 仅在 https 或 localhost 下可用
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error(
+            "浏览器禁用了摄像头 API。\n当前地址：" + location.origin +
+            "\n请用 http://localhost:端口 或 https 访问，不能用 IP / 局域网地址。"
+          );
+        }
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
+        });
+        videoEl.srcObject = mediaStream;
+        videoEl.classList.add('active');
+        placeholder.style.display = 'none';
+        btn.classList.remove('off');
+        iconOn.style.display = 'block';
+        iconOff.style.display = 'none';
+        showToast('摄像头已开启');
+      } catch (e) {
+        console.error('Camera access error:', e);
+        isVideoOff = true;
+        const name = (e && e.name) ? e.name : '';
+        let hint = (e && e.message) ? e.message : '未知原因';
+        if (name === 'NotAllowedError')       hint = '权限被拒绝，请点击地址栏小锁图标，把摄像头改为"允许"';
+        else if (name === 'NotFoundError')    hint = '没有检测到摄像头设备';
+        else if (name === 'NotReadableError') hint = '摄像头被其他程序占用（钉钉/微信/Teams/OBS 等）';
+        else if (name === 'OverconstrainedError') hint = '设备不支持 1280×720 分辨率';
+        showToast('摄像头打不开：' + hint);
+        return;
+      }
+    } else {
+      // Turn off camera
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      videoEl.srcObject = null;
+      videoEl.classList.remove('active');
+      placeholder.style.display = 'flex';
+      btn.classList.add('off');
+      iconOn.style.display = 'none';
+      iconOff.style.display = 'block';
+      showToast('摄像头已关闭');
+    }
+  }
+
+  // 页面加载时显示入席弹窗
+  window.addEventListener('DOMContentLoaded', function() {
+    // 延迟1秒后显示弹窗，给用户一点等待的感觉
+    setTimeout(function() {
+      showAdmissionModal();
+    }, 5000);
+  });
+
+  // 显示入席弹窗
+  function showAdmissionModal() {
+    const modal = document.getElementById('admissionModal');
+    modal.classList.add('show');
+  }
+
+  // 取消加入会议 - 返回开始页面
+  function cancelJoinMeeting() {
+    window.location.href = 'StartPage.html';
+  }
+
+  // 确定加入会议 - 跳转到会议页面
+  function confirmJoinMeeting() {
+    window.location.href = 'zoomMeetingMockPage.html';
+  }
+
+  // Edit name
+  function editName() {
+    const nameEdit = document.getElementById('nameEdit');
+    const nameInput = document.getElementById('nameInput');
+    nameEdit.classList.add('show');
+    nameInput.focus();
+    nameInput.select();
+  }
+
+  // Save name
+  function saveName() {
+    const nameInput = document.getElementById('nameInput');
+    const newName = nameInput.value.trim();
+    if (newName) {
+      userName = newName;
+      document.getElementById('displayName').textContent = userName;
+      document.getElementById('nameEdit').classList.remove('show');
+      showToast('姓名已更新为：' + userName);
+    }
+  }
+
+  // Handle Enter key in name input
+  document.addEventListener('DOMContentLoaded', () => {
+    const nameInput = document.getElementById('nameInput');
+    nameInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        saveName();
+      }
+    });
+  });
+
+  // Toggle audio settings (placeholder)
+  function toggleAudioSettings() {
+    showToast('音频设置功能');
+  }
+
+  // Toggle video settings (placeholder)
+  function toggleVideoSettings() {
+    showToast('视频设置功能');
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Ignore if typing in input
+    if (e.target.tagName === 'INPUT') return;
+
+    // Alt+A: Toggle mic
+    if (e.altKey && e.key === 'a') {
+      e.preventDefault();
+      toggleMic();
+    }
+
+    // Alt+V: Toggle video
+    if (e.altKey && e.key === 'v') {
+      e.preventDefault();
+      toggleVideo();
+    }
+  });
+
+  // Simulate admission to meeting after some time (for demo purposes)
+  let waitTime = 0;
+  const waitInterval = setInterval(() => {
+    waitTime++;
+    
+    // Randomly admit after 15-30 seconds (for demo)
+    if (waitTime > 15 && Math.random() > 0.95) {
+      clearInterval(waitInterval);
+      admitToMeeting();
+    }
+  }, 1000);
+
+  function admitToMeeting() {
+    const loadingText = document.querySelector('.loading-text');
+    loadingText.textContent = '正在进入会议...';
+    
+    setTimeout(() => {
+      showToast('您已被允许进入会议');
+      
+      // Simulate redirect to meeting (you could redirect to actual meeting page)
+      setTimeout(() => {
+        if (confirm('您已被允许进入会议。是否现在加入？')) {
+          // Here you would redirect to the actual meeting interface
+          // For demo, we'll just show a message
+          document.querySelector('.waiting-title').textContent = '正在加入会议...';
+          document.querySelector('.waiting-subtitle').textContent = '请稍候';
+        }
+      }, 1500);
+    }, 1000);
+  }
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop());
+    }
+  });
+
+  // Simulate network status changes
+  setInterval(() => {
+    const bars = document.querySelectorAll('.network-bar');
+    const quality = Math.random();
+    
+    bars.forEach((bar, index) => {
+      if (quality > 0.7) {
+        bar.style.opacity = '1';
+      } else if (quality > 0.4) {
+        bar.style.opacity = index < 3 ? '1' : '0.3';
+      } else {
+        bar.style.opacity = index < 2 ? '1' : '0.3';
+      }
+    });
+  }, 5000);
+</script>
+
+</body>
+</html>

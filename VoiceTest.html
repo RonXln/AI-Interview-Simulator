@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ASR Test Console</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Segoe UI", sans-serif; margin: 0; padding: 20px; background: #f4f5f7; color: #1a1a1a; }
+  h1 { margin: 0 0 12px; font-size: 20px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  button { padding: 8px 16px; font-size: 14px; border: 0; border-radius: 6px; cursor: pointer; background: #2f6feb; color: #fff; }
+  button:disabled { background: #9aa0a6; cursor: not-allowed; }
+  button.danger { background: #d93025; }
+  .status { padding: 4px 10px; border-radius: 999px; font-size: 12px; background: #e0e0e0; }
+  .status.on { background: #34a853; color: #fff; }
+  .status.err { background: #d93025; color: #fff; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+  .card { background: #fff; padding: 10px 12px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .card .k { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: .05em; }
+  .card .v { font-size: 18px; font-weight: 600; margin-top: 2px; }
+  .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pane { background: #fff; border-radius: 8px; padding: 12px; height: 380px; overflow-y: auto; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .pane h3 { margin: 0 0 8px; font-size: 14px; color: #333; }
+  .partial { color: #666; font-style: italic; padding: 4px 6px; border-left: 3px solid #fbbc04; margin-bottom: 4px; font-size: 13px; }
+  .final { color: #111; padding: 6px 8px; border-left: 3px solid #34a853; margin-bottom: 6px; background: #f8fbf8; font-size: 14px; }
+  .final .meta, .partial .meta { color: #888; font-size: 11px; margin-right: 6px; }
+  .log { background: #202124; color: #e8eaed; font-family: Consolas, monospace; font-size: 12px; padding: 10px; border-radius: 8px; height: 160px; overflow-y: auto; margin-top: 12px; }
+  .log .l-err { color: #f28b82; }
+  .log .l-ok { color: #81c995; }
+</style>
+</head>
+<body>
+<h1>ASR Test Console <span id="status" class="status">disconnected</span></h1>
+
+<div class="row">
+  <button id="btnStart">Start</button>
+  <button id="btnStop" class="danger" disabled>Stop</button>
+  <label>Server:
+    <input id="serverUrl" type="text" value="ws://localhost:8081/ws/asr-test" style="width:280px;padding:4px;">
+  </label>
+</div>
+
+<div class="stats">
+  <div class="card"><div class="k">Partial count</div><div class="v" id="cntPartial">0</div></div>
+  <div class="card"><div class="k">Final count</div><div class="v" id="cntFinal">0</div></div>
+  <div class="card"><div class="k">Last endpoint latency</div><div class="v" id="lastLatency">-</div></div>
+  <div class="card"><div class="k">Avg endpoint latency</div><div class="v" id="avgLatency">-</div></div>
+</div>
+
+<div class="panes">
+  <div class="pane">
+    <h3>Partial (streaming)</h3>
+    <div id="partialList"></div>
+  </div>
+  <div class="pane">
+    <h3>Final (endpoint)</h3>
+    <div id="finalList"></div>
+  </div>
+</div>
+
+<div class="log" id="log"></div>
+
+<script>
+const btnStart = document.getElementById('btnStart');
+const btnStop = document.getElementById('btnStop');
+const statusEl = document.getElementById('status');
+const serverInput = document.getElementById('serverUrl');
+const partialList = document.getElementById('partialList');
+const finalList = document.getElementById('finalList');
+const logEl = document.getElementById('log');
+const cntPartial = document.getElementById('cntPartial');
+const cntFinal = document.getElementById('cntFinal');
+const lastLatency = document.getElementById('lastLatency');
+const avgLatency = document.getElementById('avgLatency');
+
+let ws = null;
+let audioCtx = null;
+let mediaStream = null;
+let workletNode = null;
+let source = null;
+let running = false;
+let partialCount = 0;
+let finalCount = 0;
+let latencies = [];
+let lastUtterStart = null;
+let lastPartialText = '';
+
+function log(msg, cls) {
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStatus(text, cls) {
+  statusEl.textContent = text;
+  statusEl.className = 'status' + (cls ? ' ' + cls : '');
+}
+
+function resetStats() {
+  partialCount = 0;
+  finalCount = 0;
+  latencies = [];
+  lastUtterStart = null;
+  lastPartialText = '';
+  cntPartial.textContent = '0';
+  cntFinal.textContent = '0';
+  lastLatency.textContent = '-';
+  avgLatency.textContent = '-';
+  partialList.innerHTML = '';
+  finalList.innerHTML = '';
+}
+
+async function startCapture() {
+  const url = serverInput.value.trim();
+  if (!url) return;
+  resetStats();
+  logEl.innerHTML = '';
+  log('opening websocket…');
+  ws = new WebSocket(url);
+  ws.binaryType = 'arraybuffer';
+
+  ws.onopen = async () => {
+    setStatus('connected', 'on');
+    log('websocket open', 'l-ok');
+    try {
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+    } catch (e) {
+      log('mic error: ' + e.message, 'l-err');
+      setStatus('mic error', 'err');
+      return;
+    }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    source = audioCtx.createMediaStreamSource(mediaStream);
+    const workletCode = `
+      class PCM16Writer extends AudioWorkletProcessor {
+        process(inputs) {
+          const ch = inputs[0][0];
+          if (!ch) return true;
+          const buf = new Int16Array(ch.length);
+          for (let i = 0; i < ch.length; i++) {
+            let s = Math.max(-1, Math.min(1, ch[i]));
+            buf[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+          }
+          this.port.postMessage(buf.buffer, [buf.buffer]);
+          return true;
+        }
+      }
+      registerProcessor('pcm16-writer', PCM16Writer);
+    `;
+    const blob = new Blob([workletCode], { type: 'application/javascript' });
+    await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
+    workletNode = new AudioWorkletNode(audioCtx, 'pcm16-writer');
+    workletNode.port.onmessage = (e) => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        if (lastUtterStart === null) lastUtterStart = performance.now();
+        ws.send(e.data);
+      }
+    };
+    source.connect(workletNode);
+    workletNode.connect(audioCtx.destination);
+    running = true;
+    btnStart.disabled = true;
+    btnStop.disabled = false;
+    log('mic streaming @16kHz PCM16', 'l-ok');
+  };
+
+  ws.onmessage = (ev) => {
+    if (typeof ev.data !== 'string') return;
+    const msg = ev.data;
+    if (msg === '[READY]') {
+      log('server ready', 'l-ok');
+    } else if (msg.startsWith('[ASR-PARTIAL]:')) {
+      const rest = msg.substring('[ASR-PARTIAL]:'.length);
+      const idx = rest.indexOf(':');
+      const elapsed = idx > 0 ? rest.substring(0, idx) : '';
+      const text = idx > 0 ? rest.substring(idx + 1) : rest;
+      partialCount++;
+      cntPartial.textContent = partialCount;
+      const div = document.createElement('div');
+      div.className = 'partial';
+      div.innerHTML = `<span class="meta">${elapsed}ms</span>${escapeHtml(text)}`;
+      partialList.insertBefore(div, partialList.firstChild);
+      if (partialList.children.length > 40) partialList.removeChild(partialList.lastChild);
+      lastPartialText = text;
+    } else if (msg.startsWith('[ASR-FINAL]:')) {
+      const rest = msg.substring('[ASR-FINAL]:'.length);
+      const idx = rest.indexOf(':');
+      const elapsed = idx > 0 ? rest.substring(0, idx) : '';
+      const text = idx > 0 ? rest.substring(idx + 1) : rest;
+      finalCount++;
+      cntFinal.textContent = finalCount;
+      const now = performance.now();
+      let latency = null;
+      if (lastUtterStart !== null) {
+        latency = Math.round(now - lastUtterStart);
+        latencies.push(latency);
+        lastLatency.textContent = latency + 'ms';
+        const avg = Math.round(latencies.reduce((a,b)=>a+b, 0) / latencies.length);
+        avgLatency.textContent = avg + 'ms';
+      }
+      const div = document.createElement('div');
+      div.className = 'final';
+      div.innerHTML = `<span class="meta">${elapsed}ms${latency !== null ? ' · e2e ' + latency + 'ms' : ''}</span>${escapeHtml(text)}`;
+      finalList.insertBefore(div, finalList.firstChild);
+      if (finalList.children.length > 60) finalList.removeChild(finalList.lastChild);
+      lastUtterStart = null;
+      lastPartialText = '';
+    } else if (msg.startsWith('[ERROR]:')) {
+      log('server error: ' + msg.substring('[ERROR]:'.length), 'l-err');
+    } else if (msg === '[ASR-STREAM-END]') {
+      log('server stream end');
+    } else {
+      log('recv: ' + msg);
+    }
+  };
+
+  ws.onerror = (e) => {
+    log('ws error', 'l-err');
+  };
+  ws.onclose = () => {
+    setStatus('disconnected');
+    log('ws closed');
+    teardown();
+  };
+}
+
+function teardown() {
+  running = false;
+  btnStart.disabled = false;
+  btnStop.disabled = true;
+  try { if (workletNode) workletNode.disconnect(); } catch(e){}
+  try { if (source) source.disconnect(); } catch(e){}
+  try { if (audioCtx) audioCtx.close(); } catch(e){}
+  try { if (mediaStream) mediaStream.getTracks().forEach(t => t.stop()); } catch(e){}
+  workletNode = null; source = null; audioCtx = null; mediaStream = null;
+}
+
+function stopCapture() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    try { ws.close(1000, 'user-stop'); } catch(e){}
+  }
+  teardown();
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+btnStart.addEventListener('click', startCapture);
+btnStop.addEventListener('click', stopCapture);
+</script>
+</body>
+</html>

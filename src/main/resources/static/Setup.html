@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview Setup</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #2D8CFF; /* Zoom Blue */
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        .btn-start {
+            width: 100%;
+            padding: 14px;
+            background-color: #2D8CFF;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-start:hover {
+            background-color: #1a73e8;
+        }
+        .optional-tag {
+            color: #888;
+            font-weight: normal;
+            font-size: 12px;
+        }
+        /* —— 麦克风持续录音知情提示框 —— */
+        .mic-notice {
+            background: #FFF8E1;
+            border: 1px solid #F5C518;
+            border-left: 4px solid #F5C518;
+            border-radius: 6px;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            line-height: 1.55;
+            color: #5a4500;
+        }
+        .mic-notice .title {
+            font-weight: bold;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .mic-notice ul {
+            margin: 6px 0 8px 0;
+            padding-left: 20px;
+        }
+        .mic-notice .ack {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-top: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .mic-notice .ack input {
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .btn-start:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Configure Your Interview</h2>
+    
+    <div class="form-group">
+        <label for="interviewType">Select Scenario (面试套餐)</label>
+        <select id="interviewType">
+            <option value="1v1">1 Prof + 1 Student (单面)</option>
+            <option value="2v1">2 Profs + 1 Student (压力面)</option>
+            <option value="2v6">2 Profs + 5 AI + 1 Student (无领导小组群面)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="personalStatement">Personal Statement (个人文书)</label>
+        <textarea id="personalStatement" placeholder="Paste your Personal Statement here... (AI will read this)"></textarea>
+    </div>
+
+    <div class="form-group">
+        <label for="activityList">Activity List <span class="optional-tag">(Optional)</span></label>
+        <textarea id="activityList" placeholder="Paste your CV or Activity List here..."></textarea>
+    </div>
+
+    <div class="mic-notice">
+        <div class="title">⚠️重要说明（请务必阅读）</div>
+        为还原真实面试，本模拟服务在面试期间会有以下行为：
+        <ul>
+            <li><b>整场面试期间，麦克风将持续保持开启状态</b>，您的语音会实时传输给后端用于识别和应答。</li>
+            <li>会议界面中的「<b>静音 / Mute</b>」按钮<b>仅为视觉演示</b>，点击后 UI 会变化（如同真实 Zoom），但<b>不会真正关闭麦克风</b>。</li>
+            <li>面试结束后，麦克风会立即被释放，不再录音。</li>
+            <li>音频仅用于本次面试的实时问答，<b>不会被存储或上传到第三方</b>。</li>
+            <li><b>隐私保证：</b>本页面收集的任何个人信息（包括个人文书 Personal Statement、活动列表 Activity List、CV 等），仅在<b>本次面试会话内存中</b>临时用于生成面试问题，<b>面试结束后将立即从服务器内存中删除</b>，<b>不做任何形式的持久化存储</b>，<b>不会上传至任何第三方</b>，<b>也不会用于训练任何模型</b>。</li>
+        </ul>
+        <label class="ack">
+            <input type="checkbox" id="micAck">
+            <span>我已阅读并理解上述说明，同意在本次模拟面试期间持续开启麦克风，并知悉个人信息的处理方式。</span>
+        </label>
+    </div>
+
+    <button class="btn-start" id="startBtn" onclick="startInterview()" disabled>Start Interview 🚀</button>
+</div>
+
+<script>
+    // 没勾"我已知悉"前，Start 按钮保持禁用
+    const ackBox = document.getElementById('micAck');
+    const startBtn = document.getElementById('startBtn');
+    ackBox.addEventListener('change', () => {
+        startBtn.disabled = !ackBox.checked;
+    });
+
+    function startInterview() {
+        if (!ackBox.checked) {
+            alert("请先阅读并勾选麦克风使用说明。");
+            return;
+        }
+        const type = document.getElementById('interviewType').value;
+        const ps = document.getElementById('personalStatement').value;
+        const al = document.getElementById('activityList').value;
+
+        if (ps.trim() === '') {
+            alert("Please provide at least a short Personal Statement so the AI can prepare questions.");
+            return;
+        }
+
+        // 按钮显示加载状态
+        const btn = startBtn;
+        btn.innerText = "Initializing AI Agents...";
+        btn.disabled = true;
+        btn.style.backgroundColor = "#ccc";
+
+        // 💡 核心逻辑：把这些数据暂存到浏览器的 sessionStorage 里
+        // 这样跳转到假 Zoom 页面后，Zoom 页面就能读取这些数据发给后端了
+        sessionStorage.setItem("interviewType", type);
+        sessionStorage.setItem("personalStatement", ps);
+        sessionStorage.setItem("activityList", al);
+        sessionStorage.setItem("micAck", "true");        // 留个痕，万一以后审计用
+
+        // 模拟一点加载时间，然后跳转到zoom等待室
+        setTimeout(() => {
+            window.location.href = "zoomWaitingRoom.html";
+        }, 800);
+    }
+</script>
+
+</body>
+</html>

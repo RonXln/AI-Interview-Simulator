@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zoom Meeting</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    color: #fff;
+    user-select: none;
+  }
+
+  /* Top bar */
+  .top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 42px;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  body:hover .top-bar,
+  body:hover .bottom-bar {
+    opacity: 1;
+  }
+
+  .top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .shield-icon {
+    width: 18px;
+    height: 18px;
+    position: relative;
+  }
+
+  .shield-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .meeting-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+
+  .meeting-topic {
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .top-bar-center {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .encryption-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,255,255,0.1);
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #aaa;
+    cursor: pointer;
+  }
+
+  .encryption-badge:hover {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .top-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .top-btn:hover {
+    background: rgba(255,255,255,0.15);
+  }
+
+  .timer {
+    font-size: 13px;
+    color: #ccc;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Main video area */
+  .main-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .speaker-view {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  /* Main participant (speaker) */
+  .main-video {
+    width: calc(100% - 40px);
+    height: calc(100% - 100px);
+    max-width: 1200px;
+    background: #2d2d2d;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .avatar-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #0e72ed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .participant-name-tag {
+    position: absolute;
+    bottom: 10px;
+    left: 12px;
+    background: rgba(0,0,0,0.6);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .mic-indicator {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mic-indicator svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Self view (thumbnail) */
+  .self-view {
+    position: absolute;
+    top: 58px;
+    right: 20px;
+    width: 220px;
+    height: 140px;
+    background: #3a3a3a;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: move;
+    border: 2px solid transparent;
+    z-index: 50;
+    transition: border-color 0.2s;
+  }
+
+  .self-view:hover {
+    border-color: rgba(255,255,255,0.3);
+  }
+
+  .self-video-feed {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: none;
+  }
+
+  .self-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  .self-avatar .avatar-circle {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    background: #6b4c9a;
+  }
+
+  .self-name-tag {
+    position: absolute;
+    bottom: 6px;
+    left: 8px;
+    background: rgba(0,0,0,0.6);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Gallery strip on top (optional participants) */
+  .gallery-strip {
+    position: absolute;
+    top: 58px;
+    left: 20px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+
+  .gallery-thumb {
+    width: 160px;
+    height: 100px;
+    background: #333;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .gallery-thumb .avatar-circle {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .gallery-thumb .participant-name-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    bottom: 4px;
+    left: 6px;
+  }
+
+  /* Bottom toolbar */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: rgba(0,0,0,0.80);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .toolbar-center {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+  }
+
+  .tool-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: #fff;
+    cursor: pointer;
+    padding: 6px 14px;
+    border-radius: 8px;
+    min-width: 58px;
+    height: 50px;
+    position: relative;
+    transition: background 0.15s;
+  }
+
+  .tool-btn:hover {
+    background: rgba(255,255,255,0.12);
+  }
+
+  .tool-btn svg {
+    width: 22px;
+    height: 22px;
+    margin-bottom: 2px;
+  }
+
+  .tool-btn .btn-label {
+    font-size: 11px;
+    color: #ccc;
+    white-space: nowrap;
+  }
+
+  .tool-btn.active svg {
+    color: #fff;
+  }
+
+  .tool-btn.muted .btn-icon,
+  .tool-btn.off .btn-icon {
+    position: relative;
+  }
+
+  .tool-btn-compound {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .tool-btn-main {
+    border-radius: 8px 0 0 8px;
+    padding-right: 8px;
+  }
+
+  .tool-btn-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-left: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    cursor: pointer;
+    padding: 0 6px;
+    border-radius: 0 8px 8px 0;
+    transition: background 0.15s;
+  }
+
+  .tool-btn-arrow:hover {
+    background: rgba(255,255,255,0.12);
+  }
+
+  .tool-btn-arrow svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Red slash line for muted/off */
+  .slash-line {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 22px;
+    height: 22px;
+    pointer-events: none;
+    display: none;
+  }
+
+  .tool-btn.is-off .slash-line {
+    display: block;
+  }
+
+  .tool-btn.is-off svg.icon-main {
+    opacity: 0.7;
+  }
+
+  /* End meeting button */
+  .end-btn {
+    background: #e04040 !important;
+    border-radius: 8px !important;
+    min-width: 70px;
+    margin-left: 8px;
+  }
+
+  .end-btn:hover {
+    background: #c93535 !important;
+  }
+
+  .end-btn .btn-label {
+    color: #fff !important;
+  }
+
+  /* Divider */
+  .toolbar-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(255,255,255,0.15);
+    margin: 0 6px;
+  }
+
+  /* Participants count badge */
+  .badge-count {
+    background: #0e72ed;
+    color: #fff;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 10px;
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    min-width: 16px;
+    text-align: center;
+  }
+
+  /* Speaking indicator animation */
+  @keyframes speaking-pulse {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+  }
+
+  .speaking-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 1px;
+    height: 12px;
+  }
+
+  .speaking-bars .bar {
+    width: 2px;
+    height: 12px;
+    background: #2baa2b;
+    border-radius: 1px;
+    animation: speaking-pulse 0.6s ease-in-out infinite;
+  }
+
+  .speaking-bars .bar:nth-child(1) { animation-delay: 0s; }
+  .speaking-bars .bar:nth-child(2) { animation-delay: 0.15s; }
+  .speaking-bars .bar:nth-child(3) { animation-delay: 0.3s; }
+
+  /* Video on state */
+  .self-view.camera-on .self-video-feed {
+    display: block;
+  }
+
+  .self-view.camera-on .self-avatar {
+    display: none;
+  }
+
+  /* Toast notification */
+  .toast {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 200;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Reactions */
+  .reaction-float {
+    position: fixed;
+    bottom: 80px;
+    font-size: 36px;
+    animation: float-up 2s ease-out forwards;
+    z-index: 150;
+    pointer-events: none;
+  }
+
+  @keyframes float-up {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-200px) scale(1.3); }
+  }
+
+  /* Active speaker border */
+  .main-video.speaking {
+    border: 3px solid #0e72ed;
+  }
+
+  /* Chat panel */
+  .side-panel {
+    position: fixed;
+    top: 42px;
+    right: 0;
+    width: 340px;
+    bottom: 60px;
+    background: #242424;
+    border-left: 1px solid #3a3a3a;
+    z-index: 90;
+    display: none;
+    flex-direction: column;
+  }
+
+  .side-panel.open {
+    display: flex;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #3a3a3a;
+  }
+
+  .panel-header h3 {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .panel-close {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  .panel-close:hover {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+  }
+
+  .chat-msg {
+    margin-bottom: 14px;
+  }
+
+  .chat-msg-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+  }
+
+  .chat-msg-sender {
+    font-size: 12px;
+    font-weight: 600;
+    color: #5b9bf5;
+  }
+
+  .chat-msg-time {
+    font-size: 10px;
+    color: #888;
+  }
+
+  .chat-msg-body {
+    font-size: 13px;
+    color: #ddd;
+    line-height: 1.4;
+  }
+
+  .chat-input-area {
+    padding: 12px;
+    border-top: 1px solid #3a3a3a;
+    display: flex;
+    gap: 8px;
+  }
+
+  .chat-input-area input {
+    flex: 1;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #fff;
+    font-size: 13px;
+    outline: none;
+  }
+
+  .chat-input-area input:focus {
+    border-color: #0e72ed;
+  }
+
+  .chat-send-btn {
+    background: #0e72ed;
+    border: none;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .chat-send-btn:hover {
+    background: #0b5ec4;
+  }
+
+  /* Participants panel */
+  .participants-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+  }
+
+  .participant-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    transition: background 0.15s;
+  }
+
+  .participant-item:hover {
+    background: rgba(255,255,255,0.05);
+  }
+
+  .participant-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .participant-avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  .participant-info {
+    font-size: 13px;
+  }
+
+  .host-tag {
+    font-size: 10px;
+    color: #888;
+    margin-left: 4px;
+  }
+
+  .participant-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .participant-right svg {
+    width: 16px;
+    height: 16px;
+    color: #888;
+  }
+
+  /* Waiting room notice */
+  .participant-section-header {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* CC/Subtitle area */
+  .cc-area {
+    position: fixed;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.75);
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 15px;
+    color: #fff;
+    z-index: 80;
+    display: none;
+    max-width: 600px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<!-- Top bar -->
+<div class="top-bar" id="topBar">
+  <div class="top-bar-left">
+    <div class="shield-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2baa2b" stroke-width="2">
+        <path d="M12 2l7 4v5c0 5-3 9.5-7 11-4-1.5-7-6-7-11V6l7-4z"/>
+        <path d="M9 12l2 2 4-4" stroke="#2baa2b" stroke-width="2" fill="none"/>
+      </svg>
+    </div>
+    <div class="encryption-badge" onclick="showToast('端到端加密已启用')">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2"/>
+        <path d="M7 11V7a5 5 0 0110 0v4"/>
+      </svg>
+      <span>已加密</span>
+    </div>
+    <span class="timer" id="timer">00:32:15</span>
+  </div>
+  <div class="top-bar-center">
+    <span class="meeting-topic">mock interview</span>
+  </div>
+  <div class="top-bar-right">
+    <button class="top-btn" onclick="showToast('会议信息已复制')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 3H6a2 2 0 00-2 2v14"/>
+        <rect x="8" y="5" width="12" height="16" rx="2"/>
+      </svg>
+      会议号: 886 4523 7891
+    </button>
+    <button class="top-btn" onclick="toggleView()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="8" height="8" rx="1"/>
+        <rect x="14" y="3" width="8" height="8" rx="1"/>
+        <rect x="2" y="13" width="8" height="8" rx="1"/>
+        <rect x="14" y="13" width="8" height="8" rx="1"/>
+      </svg>
+      视图
+    </button>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="main-content">
+  <div class="speaker-view">
+    <!-- 顶部画廊条：根据面试套餐动态生成其他 AI 参与者的小头像 -->
+    <div class="gallery-strip" id="galleryStrip"></div>
+
+    <!-- Main speaker video -->
+    <div class="main-video speaking" id="mainVideo">
+      <div class="avatar-circle" id="mainAvatar" style="background: #0e72ed;">P</div>
+      <div class="participant-name-tag">
+        <div class="mic-indicator">
+          <div class="speaking-bars">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+          </div>
+        </div>
+        <span id="mainSpeakerName">ProfA (主考官)</span>
+      </div>
+    </div>
+
+    <!-- Self view -->
+    <div class="self-view" id="selfView">
+      <video class="self-video-feed" id="selfVideoFeed" autoplay muted playsinline></video>
+      <div class="self-avatar">
+        <div class="avatar-circle" style="background: #6b4c9a;">我</div>
+      </div>
+      <div class="self-name-tag">
+        <div class="mic-indicator" id="selfMicIndicator">
+          <!-- 默认未静音：绿色麦克风 -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2baa2b" stroke-width="2">
+            <path d="M12 1a4 4 0 014 4v4a4 4 0 01-8 0V5a4 4 0 014-4z"/>
+            <path d="M18 10a6 6 0 01-12 0"/>
+            <line x1="12" y1="16" x2="12" y2="20"/>
+          </svg>
+        </div>
+        <span>我</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Chat panel -->
+<div class="side-panel" id="chatPanel">
+  <div class="panel-header">
+    <h3>聊天</h3>
+    <button class="panel-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+ 
+  </div>
+  <div class="chat-input-area">
+    <input type="text" id="chatInput" placeholder="输入消息..." onkeypress="if(event.key==='Enter')sendChat()">
+    <button class="chat-send-btn" onclick="sendChat()">发送</button>
+  </div>
+</div>
+
+<!-- Participants panel -->
+<div class="side-panel" id="participantsPanel">
+  <div class="panel-header">
+    <h3 id="participantsTitle">参会者 (2)</h3>
+    <button class="panel-close" onclick="toggleParticipants()">✕</button>
+  </div>
+  <div class="participants-list">
+    <div class="participant-section-header">会议中 (<span id="participantsCountInline">2</span>)</div>
+    <!-- 这里动态渲染所有 AI 角色 -->
+    <div id="aiParticipantsList"></div>
+
+    <!-- 自己 -->
+    <div class="participant-item">
+      <div class="participant-left">
+        <div class="participant-avatar-sm" style="background:#6b4c9a;">我</div>
+        <div class="participant-info">我<span class="host-tag">（你）</span></div>
+      </div>
+      <div class="participant-right" id="myParticipantIcons">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#e04040" stroke-width="2" id="myParticipantMic">
+          <path d="M12 1a4 4 0 014 4v4a4 4 0 01-8 0V5a4 4 0 014-4z" stroke="#888"/>
+          <line x1="2" y1="2" x2="22" y2="22"/>
+        </svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#e04040" stroke-width="2" id="myParticipantCam">
+          <rect x="2" y="4" width="20" height="14" rx="2" stroke="#888"/>
+          <line x1="2" y1="2" x2="22" y2="22"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom toolbar -->
+<div class="bottom-bar" id="bottomBar">
+  <div class="toolbar-section">
+    <!-- Mute button with dropdown -->
+    <div class="tool-btn-compound">
+      <button class="tool-btn tool-btn-main" id="muteBtn" onclick="toggleMute()">
+        <div class="btn-icon" style="position:relative;">
+          <!-- Unmuted mic -->
+          <svg class="icon-main" id="micIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a4 4 0 014 4v4a4 4 0 01-8 0V5a4 4 0 014-4z"/>
+            <path d="M18 10a6 6 0 01-12 0"/>
+            <line x1="12" y1="16" x2="12" y2="21"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+          </svg>
+          <!-- Muted mic -->
+          <svg class="icon-main" id="micIconOff" viewBox="0 0 24 24" fill="none" stroke="#e04040" stroke-width="2" style="display:none;">
+            <path d="M12 1a4 4 0 014 4v4a4 4 0 01-8 0V5a4 4 0 014-4z" stroke="currentColor"/>
+            <path d="M18 10a6 6 0 01-12 0" stroke="currentColor"/>
+            <line x1="12" y1="16" x2="12" y2="21" stroke="currentColor"/>
+            <line x1="8" y1="21" x2="16" y2="21" stroke="currentColor"/>
+            <line x1="3" y1="3" x2="21" y2="21" stroke="#e04040" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <span class="btn-label" id="muteBtnLabel">静音</span>
+      </button>
+      <button class="tool-btn-arrow" onclick="showToast('音频设置')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6,9 12,15 18,9"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Video button with dropdown -->
+    <div class="tool-btn-compound">
+      <button class="tool-btn tool-btn-main is-off" id="videoBtn" onclick="toggleVideo()">
+        <div class="btn-icon" style="position:relative;">
+          <!-- Video on -->
+          <svg class="icon-main" id="camIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+            <rect x="2" y="5" width="15" height="13" rx="2"/>
+            <polygon points="23,7 17,12 23,17"/>
+          </svg>
+          <!-- Video off -->
+          <svg class="icon-main" id="camIconOff" viewBox="0 0 24 24" fill="none" stroke="#e04040" stroke-width="2">
+            <rect x="2" y="5" width="15" height="13" rx="2" stroke="currentColor"/>
+            <polygon points="23,7 17,12 23,17" stroke="currentColor"/>
+            <line x1="2" y1="2" x2="22" y2="22" stroke="#e04040" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <span class="btn-label" id="videoBtnLabel">开启视频</span>
+      </button>
+      <button class="tool-btn-arrow" onclick="showToast('视频设置')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6,9 12,15 18,9"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="toolbar-center">
+    <!-- Security -->
+    <button class="tool-btn" onclick="showToast('安全设置')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2l7 4v5c0 5-3 9.5-7 11-4-1.5-7-6-7-11V6l7-4z"/>
+      </svg>
+      <span class="btn-label">安全</span>
+    </button>
+
+    <!-- Participants -->
+    <button class="tool-btn" id="participantsBtn" onclick="toggleParticipants()">
+      <span class="badge-count" id="participantsBadge">2</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M22 21v-2a4 4 0 00-3-3.87"/>
+        <path d="M16 3.13a4 4 0 010 7.75"/>
+      </svg>
+      <span class="btn-label">参会者</span>
+    </button>
+
+    <!-- Chat -->
+    <button class="tool-btn" id="chatBtn" onclick="toggleChat()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+      </svg>
+      <span class="btn-label">聊天</span>
+    </button>
+
+    <!-- Share Screen -->
+    <button class="tool-btn" onclick="showToast('屏幕共享')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2baa2b" stroke-width="2">
+        <rect x="2" y="3" width="20" height="14" rx="2"/>
+        <line x1="8" y1="21" x2="16" y2="21"/>
+        <line x1="12" y1="17" x2="12" y2="21"/>
+        <polyline points="8,10 12,6 16,10" stroke="#2baa2b" fill="none"/>
+      </svg>
+      <span class="btn-label">共享屏幕</span>
+    </button>
+
+    <!-- Record -->
+    <button class="tool-btn" onclick="showToast('录制功能')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <circle cx="12" cy="12" r="4" fill="currentColor"/>
+      </svg>
+      <span class="btn-label">录制</span>
+    </button>
+
+    <!-- Reactions -->
+    <button class="tool-btn" onclick="sendReaction()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+        <line x1="9" y1="9" x2="9.01" y2="9" stroke-width="3" stroke-linecap="round"/>
+        <line x1="15" y1="9" x2="15.01" y2="9" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="btn-label">反应</span>
+    </button>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Apps -->
+    <button class="tool-btn" onclick="showToast('应用')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      <span class="btn-label">应用</span>
+    </button>
+  </div>
+
+  <div class="toolbar-right">
+    <!-- CC -->
+    <button class="tool-btn" onclick="showToast('字幕已开启')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <text x="6" y="15" fill="currentColor" stroke="none" font-size="9" font-weight="bold">CC</text>
+      </svg>
+      <span class="btn-label">字幕</span>
+    </button>
+
+    <!-- More -->
+    <button class="tool-btn" onclick="showToast('更多选项')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+        <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+      </svg>
+      <span class="btn-label">更多</span>
+    </button>
+
+    <!-- End -->
+    <button class="tool-btn end-btn" onclick="endMeeting()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" transform="rotate(135, 12, 12)"/>
+      </svg>
+      <span class="btn-label">结束</span>
+    </button>
+  </div>
+</div>
+
+<script>
+  // ============ WebSocket 和音频处理 ============
+  let socket;
+  let audioContext;
+  let processor;
+  let input;
+  let mediaStream = null;   // 摄像头的 stream
+  let micStream  = null;    // 麦克风的 stream（保活用：永不主动 stop）
+
+  // WebSocket 地址
+  const WS_URL = "ws://localhost:8081/ws/audio";
+
+  // ============ Zoom 会议相关状态 ============
+  let isMuted = false; // 仅 UI 状态——真正的麦克风采集始终运行（拟真演技）
+  let isVideoOff = true;
+  let isChatOpen = false;
+  let isParticipantsOpen = false;
+  let timerSeconds = 1935;
+
+  /**
+   * 申请麦克风权限并返回 stream。
+   * 抛出原始错误，由调用方按场景给提示。
+   */
+  async function acquireMicStream() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const err = new Error(
+        "浏览器禁用了麦克风 API。\n当前地址：" + location.origin +
+        "\n请用 http://localhost:端口 或 https 访问。"
+      );
+      err.name = "InsecureContext";
+      throw err;
+    }
+    return await navigator.mediaDevices.getUserMedia({ audio: true });
+  }
+
+  /**
+   * 把权限/设备错误翻成人话。
+   */
+  function micErrorHint(e) {
+    const name = (e && e.name) ? e.name : '';
+    if (name === 'NotAllowedError')         return '权限被拒绝。请点击地址栏小锁图标 → 麦克风 → 改成"允许"，然后刷新页面';
+    if (name === 'NotFoundError')           return '没有检测到麦克风设备';
+    if (name === 'NotReadableError')        return '麦克风被其他程序占用（钉钉/微信/Teams/OBS 等）';
+    if (name === 'InsecureContext')         return e.message;
+    return (e && e.message) ? e.message : '未知原因';
+  }
+
+  /**
+   * 检查当前持有的麦克风 stream 是否还活着。
+   * 浏览器在以下情况会"暗中"把 track 标记为 ended：
+   *   - 用户在系统设置/浏览器设置里手动撤销了麦克风权限
+   *   - 设备被其他程序抢占
+   *   - USB 麦克风被拔
+   */
+  function isMicAlive() {
+    if (!micStream) return false;
+    const tracks = micStream.getAudioTracks();
+    if (!tracks.length) return false;
+    return tracks.some(t => t.readyState === 'live' && t.enabled !== false);
+  }
+
+  // ============ 🎬 面试角色配置（要和后端 LLMService / tts.py 保持一致）============
+  // 每个角色：代号、显示名、头像首字母、头像背景色
+  const ROLE_LIBRARY = {
+    ProfA:   { name: "Prof. A",  initial: "A", color: "#0e72ed", host: true,  tag: "（主持人）" },
+    ProfB:   { name: "Prof. B",  initial: "B", color: "#1a73e8", host: false, tag: "（追问考官）" },
+    Alice:   { name: "Alice",    initial: "A", color: "#e91e63", host: false, tag: "（AI 考生）" },
+    Bob:     { name: "Bob",      initial: "B", color: "#ff9800", host: false, tag: "（AI 考生）" },
+    Charlie: { name: "Charlie",  initial: "C", color: "#4caf50", host: false, tag: "（AI 考生）" },
+    David:   { name: "David",    initial: "D", color: "#9c27b0", host: false, tag: "（AI 考生）" },
+    Emma:    { name: "Emma",     initial: "E", color: "#00bcd4", host: false, tag: "（AI 考生）" },
+  };
+
+  // 兜底角色：找不到时显示这个，而不是静默失败
+  const UNKNOWN_ROLE = { name: "未知角色", initial: "?", color: "#777777", host: false, tag: "" };
+
+  // 不同套餐对应的角色名单（顺序就是渲染顺序）
+  const CAST_BY_TYPE = {
+    "1v1": ["ProfA"],
+    "2v1": ["ProfA", "ProfB"],
+    "2v6": ["ProfA", "ProfB", "Alice", "Bob", "Charlie", "David", "Emma"],
+  };
+
+  // 当前这场面试的角色名单
+  let currentCast = [];
+
+  // 兼容路径（老 [AUDIO]:speaker:base64 单帧）用 <audio>，队列在 activeAudios
+  let activeAudios = [];
+
+  // ✨ 5.5b Web Audio 多轨调度器
+  //    - 每条 [UTTER_BEGIN] 起一条 track（一位 speaker 的一段发言）
+  //    - track 内多个 chunk 按 seq 递增顺序、紧密串联（各 chunk buffer 时长累计）
+  //    - track 之间按 UTTER_BEGIN 的 delayMs 排 start 时刻，允许 overlap（抢话）
+  //    - 最后一条 track 播完 → USER_TURN_READY
+  let audioCtx = null;
+  const tracks = new Map();          // trackKey → track state
+  const trackOrder = [];             // 按创建顺序的 trackKey 列表（也是 speakingOrder）
+  let currentTrackKey = null;        // 当前正在接收 chunk 的 track
+  let trackSeq = 0;                  // 单调递增编号，避免同名 speaker 冲突
+  const MIN_LEAD_MS = 20;            // 起播比 currentTime 早算作已错过，压到 now+20ms
+
+  function ensureAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
+  }
+
+  /** 开启一条新 track。delayMs 相对前一条 track 的 startTime。 */
+  function beginUtterance(speaker, delayMs, previewText) {
+    const ctx = ensureAudioCtx();
+    const now = ctx.currentTime;
+    const prevKey = trackOrder.length > 0 ? trackOrder[trackOrder.length - 1] : null;
+    const prev = prevKey ? tracks.get(prevKey) : null;
+
+    let startAt;
+    if (!prev) {
+      startAt = now;
+    } else if (delayMs > 0) {
+      // 允许 overlap：从前一条 track 起点向后偏移 delayMs
+      startAt = Math.max(now + MIN_LEAD_MS / 1000, prev.startAt + delayMs / 1000);
+    } else {
+      // 接力：等前一条 track 播完再起
+      startAt = Math.max(now + MIN_LEAD_MS / 1000, prev.endAt);
+    }
+
+    const key = speaker + '#' + (++trackSeq);
+    const track = {
+      key,
+      speaker,
+      nextSeq: 0,
+      pending: new Map(),
+      startAt,
+      endAt: startAt,
+      ended: false,
+      sources: [],
+      startsFired: 0,
+      chunksReceived: 0,
+      previewText,
+      mainCue: null,        // cue-source，到 startAt 时触发主视角切换
+    };
+    tracks.set(key, track);
+    trackOrder.push(key);
+    currentTrackKey = key;
+
+    // 主视角切换：cue-source 绑在计划 startAt 上（AudioContext 时钟），跟 track 声明顺序对齐，
+    // 不受首 chunk decode 快慢影响；后续如遇 chunk 延后起播，会在 drainTrack 里 reschedule。
+    scheduleMainSwitchCue(track);
+
+    console.log('🎬 track 开 ' + key + ' startAt=' + startAt.toFixed(3) + ' (now=' + now.toFixed(3) + ' delayMs=' + delayMs + ')');
+  }
+
+  /** 把 track 的主视角切换 cue 排到 track.startAt（可反复调用，会取消并重排上一个 cue）。 */
+  function scheduleMainSwitchCue(track) {
+    const ctx = ensureAudioCtx();
+    if (track.mainCue) {
+      try { track.mainCue.onended = null; track.mainCue.stop(); } catch (e) {}
+      track.mainCue = null;
+    }
+    const cue = ctx.createBufferSource();
+    cue.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const at = Math.max(track.startAt, ctx.currentTime);
+    const capturedKey = track.key;
+    cue.onended = () => {
+      const t = tracks.get(capturedKey);
+      if (!t || t.mainCue !== cue) return;   // 已被 reschedule，忽略旧 cue
+      setMainSpeaker(t.speaker);
+      if (t.previewText && t.previewText.length > 0) {
+        showToast('🤖 ' + t.speaker + ': ' + t.previewText.substring(0, 20) + '...');
+      }
+    };
+    cue.start(at);
+    track.mainCue = cue;
+  }
+
+  /** 收到一个 chunk：decode → 排入当前 track。 */
+  function pushAudioChunk(speaker, seq, base64) {
+    // 严格按 currentTrackKey 定位 track，避免"speaker 匹配旧 track"误路由造成叠音。
+    let track = currentTrackKey ? tracks.get(currentTrackKey) : null;
+    if (!track || track.speaker !== speaker || track.ended) {
+      console.warn('⚠️ AUDIO_CHUNK 未匹配 currentTrackKey，临时开一条：speaker=' + speaker
+          + ' currentTrackKey=' + currentTrackKey
+          + ' trackSpeaker=' + (track && track.speaker)
+          + ' ended=' + (track && track.ended));
+      beginUtterance(speaker, 0, '');
+      track = tracks.get(currentTrackKey);
+    }
+    track.chunksReceived++;
+
+    const ctx = ensureAudioCtx();
+    const bin = atob(base64);
+    const buf = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+    const trackKeyAtPush = track.key;
+    ctx.decodeAudioData(buf.buffer.slice(0))
+      .then(audioBuffer => {
+        // decode 是异步的，防止 track 已被 reset
+        const t = tracks.get(trackKeyAtPush);
+        if (!t) { console.warn('⚠️ decode 完成但 track 已消失 key=' + trackKeyAtPush); return; }
+        t.pending.set(seq, audioBuffer);
+        console.log('📥 pending set ' + t.key + ' seq=' + seq + ' dur=' + audioBuffer.duration.toFixed(3)
+            + ' pendingSize=' + t.pending.size + ' nextSeq=' + t.nextSeq);
+        drainTrack(t);
+      })
+      .catch(err => {
+        console.error('❌ decodeAudioData 失败 seq=' + seq + ':', err);
+        const t = tracks.get(trackKeyAtPush);
+        if (!t) return;
+        t.pending.set(seq, null);
+        drainTrack(t);
+      });
+  }
+
+  /** UTTER_END：标记本 track 结束。 */
+  function endUtterance(speaker, totalChunks) {
+    // 找 speaker 最近一条尚未 ended 的 track
+    for (let i = trackOrder.length - 1; i >= 0; i--) {
+      const t = tracks.get(trackOrder[i]);
+      if (t && t.speaker === speaker && !t.ended) {
+        t.ended = true;
+        t.totalExpected = totalChunks;
+        drainTrack(t);
+        maybeSignalUserTurnReady();
+        return;
+      }
+    }
+  }
+
+  /** 按 seq 顺序把 pending 里已 decode 的 chunk 排到 endAt 后。 */
+  function drainTrack(track) {
+    const ctx = ensureAudioCtx();
+    while (track.pending.has(track.nextSeq)) {
+      const seq = track.nextSeq;
+      const buffer = track.pending.get(seq);
+      track.pending.delete(seq);
+      track.nextSeq++;
+      if (!buffer) continue;
+
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(ctx.destination);
+      const endAtBefore = track.endAt;
+      const nowLead = ctx.currentTime + MIN_LEAD_MS / 1000;
+      // 三方 max：不早于 startAt、不早于上一次 endAt、不早于当前时钟+lead。保证无回退无叠音。
+      const at = Math.max(track.startAt, track.endAt, nowLead);
+      src.start(at);
+      src.__seq = seq;
+      src.__trackKey = track.key;
+      track.sources.push(src);
+      track.endAt = at + buffer.duration;
+
+      // 首 chunk 若因 decode 慢被 nowLead 顶到 track.startAt 之后，同步把主视角 cue 推到实际 at 上。
+      if (seq === 0 && at > track.startAt + 0.001) {
+        track.startAt = at;
+        scheduleMainSwitchCue(track);
+      }
+
+      src.onended = () => {
+        track.startsFired++;
+        track.sources = track.sources.filter(s => s !== src);
+        console.log('✓ ' + track.key + ' seq=' + seq + ' 结束 (' + track.speaker + ')');
+        maybeSignalUserTurnReady();
+      };
+      console.log('▶ schedule ' + track.key + ' seq=' + seq
+          + ' at=' + at.toFixed(3)
+          + ' dur=' + buffer.duration.toFixed(3)
+          + ' endAtBefore=' + endAtBefore.toFixed(3)
+          + ' endAtAfter=' + track.endAt.toFixed(3)
+          + ' nowLead=' + nowLead.toFixed(3)
+          + ' now=' + ctx.currentTime.toFixed(3));
+    }
+  }
+
+  /** 所有 track 都 ended 且所有 chunk 都实际 onended → USER_TURN_READY，并清空。 */
+  function maybeSignalUserTurnReady() {
+    if (trackOrder.length === 0) return;
+    for (const key of trackOrder) {
+      const t = tracks.get(key);
+      if (!t) continue;
+      if (!t.ended) return;
+      // 收到但 decode 未回的 chunk 不体现在 pending / sources 里，必须靠 chunksReceived vs startsFired 判定。
+      if (t.startsFired < t.chunksReceived) return;
+      // ended 后，totalExpected 是权威数——若还没收够 chunk 也不能报播完。
+      if (typeof t.totalExpected === 'number' && t.startsFired < t.totalExpected) return;
+      if (t.pending.size !== 0) return;
+      if (t.sources.length !== 0) return;
+    }
+    console.log('🎤 所有 track 播完 → USER_TURN_READY');
+    sendUserTurnReady();
+    for (const key of trackOrder) {
+      const t = tracks.get(key);
+      if (t && t.mainCue) { try { t.mainCue.onended = null; t.mainCue.stop(); } catch (_) {} t.mainCue = null; }
+    }
+    tracks.clear();
+    trackOrder.length = 0;
+    currentTrackKey = null;
+  }
+
+  function sendUserTurnReady() {
+    try {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ event: 'USER_TURN_READY' }));
+      }
+    } catch (e) {
+      console.warn('⚠️ USER_TURN_READY 发送失败:', e);
+    }
+  }
+
+  /** cleanupAndExit 调用。 */
+  function resetUtteranceQueue() {
+    if (trackOrder.length > 0) sendUserTurnReady();
+    for (const key of trackOrder) {
+      const t = tracks.get(key);
+      if (!t) continue;
+      t.sources.forEach(s => { try { s.onended = null; s.stop(); } catch (_) {} });
+      if (t.mainCue) { try { t.mainCue.onended = null; t.mainCue.stop(); } catch (_) {} t.mainCue = null; }
+    }
+    tracks.clear();
+    trackOrder.length = 0;
+    currentTrackKey = null;
+  }
+
+  /**
+   * 🔎 把 LLM 返回的 speaker 字符串解析成 ROLE_LIBRARY 里的 key。
+   *  - 精确匹配（"ProfA"）
+   *  - 大小写无关（"profa" / "PROFA"）
+   *  - 去掉空格/点/下划线（"Prof A" / "Prof. A" / "prof_a" → ProfA）
+   *  - 别名（"Professor A" / "教授A" → ProfA）
+   *  - 包含匹配（"This is Alice speaking" → Alice）
+   *  - 都没命中 → 返回 null，让调用方用 Unknown 兜底
+   */
+  function resolveRoleId(rawSpeaker) {
+    if (!rawSpeaker) return null;
+    const keys = Object.keys(ROLE_LIBRARY);
+
+    // 1) 精确
+    if (ROLE_LIBRARY[rawSpeaker]) return rawSpeaker;
+
+    // 2) 归一化：去空格/点/下划线/连字符，转小写
+    const norm = s => String(s).toLowerCase().replace(/[\s._\-]+/g, '');
+    const target = norm(rawSpeaker);
+
+    // 2a) 归一化后精确
+    for (const k of keys) {
+      if (norm(k) === target) return k;
+    }
+
+    // 3) 常见别名
+    const aliasMap = {
+      'professora': 'ProfA', 'profamain': 'ProfA', '主考官': 'ProfA', '教授a': 'ProfA', '教授甲': 'ProfA',
+      'professorb': 'ProfB', '追问考官': 'ProfB', '教授b': 'ProfB', '教授乙': 'ProfB',
+      'system': 'ProfA', 'host': 'ProfA',
+    };
+    if (aliasMap[target]) return aliasMap[target];
+
+    // 4) 包含匹配（防 LLM 说"Alice 觉得"这种回了句子的情况）
+    for (const k of keys) {
+      if (target.includes(norm(k))) return k;
+    }
+
+    return null;
+  }
+
+  /**
+   * 根据 sessionStorage 里的套餐类型，渲染：
+   *   1) 顶部 gallery-strip（除了主画面那一位之外的小头像）
+   *   2) 参会者面板列表
+   *   3) 主画面默认显示 ProfA
+   *   4) 参会者人数 badge（含自己）
+   */
+  function renderInterviewCast() {
+    const type = sessionStorage.getItem("interviewType") || "1v1";
+    currentCast = CAST_BY_TYPE[type] || CAST_BY_TYPE["1v1"];
+
+    // —— 1. 主画面默认显示第一位（ProfA） ——
+    setMainSpeaker(currentCast[0]);
+
+    // —— 2. 顶部画廊条：渲染除主画面外的其他 AI ——
+    const strip = document.getElementById("galleryStrip");
+    strip.innerHTML = "";
+    // 群面时画廊条的小头像太多会挤，所以最多并排显示前 6 个
+    const galleryRoles = currentCast.slice(1, 7);
+    galleryRoles.forEach(roleId => {
+      const role = ROLE_LIBRARY[roleId];
+      if (!role) return;
+      const thumb = document.createElement("div");
+      thumb.className = "gallery-thumb";
+      thumb.id = "gallery_" + roleId;
+      thumb.innerHTML = `
+        <div class="avatar-circle" style="background:${role.color};">${role.initial}</div>
+        <div class="participant-name-tag"><span>${role.name}</span></div>
+      `;
+      strip.appendChild(thumb);
+    });
+
+    // —— 3. 参会者面板：渲染所有 AI ——
+    const listEl = document.getElementById("aiParticipantsList");
+    listEl.innerHTML = "";
+    currentCast.forEach(roleId => {
+      const role = ROLE_LIBRARY[roleId];
+      if (!role) return;
+      const item = document.createElement("div");
+      item.className = "participant-item";
+      item.innerHTML = `
+        <div class="participant-left">
+          <div class="participant-avatar-sm" style="background:${role.color};">${role.initial}</div>
+          <div class="participant-info">${role.name}${role.host ? '<span class="host-tag">（主持人）</span>' : '<span class="host-tag">' + role.tag + '</span>'}</div>
+        </div>
+        <div class="participant-right">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2baa2b" stroke-width="2">
+            <path d="M12 1a4 4 0 014 4v4a4 4 0 01-8 0V5a4 4 0 014-4z"/>
+            <path d="M18 10a6 6 0 01-12 0"/>
+            <line x1="12" y1="16" x2="12" y2="20"/>
+          </svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2baa2b" stroke-width="2">
+            <rect x="2" y="4" width="20" height="14" rx="2"/>
+            <circle cx="12" cy="11" r="3"/>
+          </svg>
+        </div>
+      `;
+      listEl.appendChild(item);
+    });
+
+    // —— 4. 各处人数计数（AI 数量 + 自己 1 人） ——
+    const total = currentCast.length + 1;
+    document.getElementById("participantsTitle").textContent  = `参会者 (${total})`;
+    document.getElementById("participantsCountInline").textContent = total;
+    document.getElementById("participantsBadge").textContent = total;
+
+    console.log(`🎬 套餐 ${type} 渲染完成，共 ${total} 人：${currentCast.join(", ")} + 我`);
+  }
+
+  /**
+   * 把主画面切到指定角色（AI 发言时调用）
+   * 入参 rawSpeaker 是后端 LLM 返回的原始字符串，先经过 resolveRoleId() 解析
+   */
+  function setMainSpeaker(rawSpeaker) {
+    const id = resolveRoleId(rawSpeaker);
+    const role = id ? ROLE_LIBRARY[id] : UNKNOWN_ROLE;
+    if (!id) {
+      console.warn('⚠️ 未识别的 speaker，已用 Unknown 兜底：', rawSpeaker);
+    }
+    const avatar = document.getElementById("mainAvatar");
+    const name   = document.getElementById("mainSpeakerName");
+    if (avatar) {
+      avatar.style.background = role.color;
+      avatar.textContent = role.initial;
+    }
+    if (name) {
+      // 若 LLM 给的是个完全陌生的名字，把原文也带上方便排查
+      name.textContent = id
+        ? role.name + (role.host ? "（主持人）" : "")
+        : (UNKNOWN_ROLE.name + "：" + rawSpeaker);
+    }
+  }
+
+  // 更新计时器
+  function updateTimer() {
+    timerSeconds++;
+    const h = Math.floor(timerSeconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((timerSeconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (timerSeconds % 60).toString().padStart(2, '0');
+    document.getElementById('timer').textContent = `${h}:${m}:${s}`;
+  }
+  setInterval(updateTimer, 1000);
+
+  // 显示 Toast
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  // 切换静音 ——「拟真演技」：UI 完全可交互，但真实麦克风始终保持开启。
+  //   - 点"静音"：仅切 UI（按钮变红 / 标签变 / 自我视图红斜杠），后端继续接收音频
+  //   - 点"解除静音"：检查麦克风是否还活着；若被系统/其他程序中断，尝试重新申请权限
+  async function toggleMute() {
+    isMuted = !isMuted;
+    const btn   = document.getElementById('muteBtn');
+    const label = document.getElementById('muteBtnLabel');
+    const iconOn  = document.getElementById('micIconOn');
+    const iconOff = document.getElementById('micIconOff');
+    const selfMicIndicator = document.getElementById('selfMicIndicator');
+
+    if (isMuted) {
+      // —— 切到「已静音」UI（仅表演）——
+      btn.classList.add('is-off');
+      label.textContent = '解除静音';
+      if (iconOn)  iconOn.style.display  = 'none';
+      if (iconOff) iconOff.style.display = 'block';
+      if (selfMicIndicator) {
+        selfMicIndicator.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="#e04040" stroke-width="2">
+            <line x1="2" y1="2" x2="22" y2="22"/>
+            <path d="M12 1a4 4 0 014 4v4a4 4 0 01-8 0V5a4 4 0 014-4z" stroke="#aaa"/>
+            <path d="M18 10a6 6 0 01-12 0" stroke="#aaa"/>
+            <line x1="12" y1="16" x2="12" y2="20" stroke="#aaa"/>
+          </svg>`;
+      }
+      showToast('🔇 已静音');
+      return;
+    }
+
+    // —— 切到「未静音」：必须先确认麦克风可用 ——
+    // 如果当前 stream 已被系统中断（用户去设置里撤了权限 / 拔了 USB 麦），尝试重新申请
+    if (!isMicAlive()) {
+      try {
+        console.log('🎤 麦克风已失效，尝试重新申请权限...');
+        showToast('🎤 正在请求麦克风权限...');
+        const fresh = await acquireMicStream();
+
+        // 拿到新 stream 后，要把音频处理管线重新接上
+        try { if (input)     input.disconnect();     } catch (_) {}
+        try { if (processor) processor.disconnect(); } catch (_) {}
+        try { if (audioContext && audioContext.state !== 'closed') await audioContext.close(); } catch (_) {}
+
+        micStream = fresh;
+        setupAudioProcessing(micStream);
+        showToast('🎤 麦克风已重新启用');
+      } catch (err) {
+        // 拿不到权限 —— UI 回退到静音状态，并告诉用户怎么开
+        console.error('❌ 重新申请麦克风失败:', err);
+        isMuted = true; // 回滚状态
+        showToast('❌ 无法启用麦克风：' + micErrorHint(err));
+        return;
+      }
+    }
+
+    // —— 切到「未静音」UI ——
+    btn.classList.remove('is-off');
+    label.textContent = '静音';
+    if (iconOn)  iconOn.style.display  = 'block';
+    if (iconOff) iconOff.style.display = 'none';
+    if (selfMicIndicator) {
+      selfMicIndicator.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2baa2b" stroke-width="2">
+          <path d="M12 1a4 4 0 014 4v4a4 4 0 01-8 0V5a4 4 0 014-4z"/>
+          <path d="M18 10a6 6 0 01-12 0"/>
+          <line x1="12" y1="16" x2="12" y2="20"/>
+        </svg>`;
+    }
+    showToast('🎤 已解除静音');
+  }
+
+  // 切换视频
+  async function toggleVideo() {
+    isVideoOff = !isVideoOff;
+    const btn = document.getElementById('videoBtn');
+    const label = document.getElementById('videoBtnLabel');
+    const iconOn = document.getElementById('camIconOn');
+    const iconOff = document.getElementById('camIconOff');
+    const selfView = document.getElementById('selfView');
+    const videoEl = document.getElementById('selfVideoFeed');
+
+    if (!isVideoOff) {
+      // 打开摄像头
+      try {
+        // ⚠️ 重要：mediaDevices 仅在 https 或 localhost 下可用
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error(
+            "浏览器禁用了摄像头 API。\n" +
+            "当前地址：" + location.origin + "\n" +
+            "请使用 http://localhost:端口 或 https 访问，不能用 IP / 局域网地址。"
+          );
+        }
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        videoEl.srcObject = mediaStream;
+        selfView.classList.add('camera-on');
+        btn.classList.remove('is-off');
+        label.textContent = '关闭视频';
+        iconOn.style.display = 'block';
+        iconOff.style.display = 'none';
+        showToast('📹 摄像头已开启');
+      } catch (e) {
+        console.error('❌ Camera error:', e);
+        isVideoOff = true;
+        // 把真实错误展示出来，方便定位
+        const name = (e && e.name) ? e.name : '';
+        let hint = (e && e.message) ? e.message : '未知原因';
+        if (name === 'NotAllowedError')       hint = '权限被拒绝。请在地址栏左侧的小锁图标里把摄像头改成"允许"';
+        else if (name === 'NotFoundError')    hint = '没有检测到摄像头设备';
+        else if (name === 'NotReadableError') hint = '摄像头被其他程序占用（钉钉/微信/Teams/OBS 等）';
+        else if (name === 'OverconstrainedError') hint = '设备不支持所请求的分辨率';
+        showToast('❌ 摄像头打不开：' + hint);
+      }
+    } else {
+      // 关闭摄像头
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      videoEl.srcObject = null;
+      selfView.classList.remove('camera-on');
+      btn.classList.add('is-off');
+      label.textContent = '开启视频';
+      iconOn.style.display = 'none';
+      iconOff.style.display = 'block';
+      showToast('📹 摄像头已关闭');
+    }
+  }
+
+  // 禁用结束会议功能
+  function endMeeting() {
+    // 二次确认弹窗（之后可以换成更精致的自定义 modal）
+    if (!confirm('确定要离开面试吗？\n这场面试将无法恢复。')) {
+      return;
+    }
+    requestTranscriptThenExit('您已离开会议');
+  }
+
+  /**
+   * 用户主动退出时：先告诉后端"我要走了，把 transcript 推过来"，
+   * 收到 [TRANSCRIPT] 后再走 cleanupAndExit；超时则兜底直接退。
+   */
+  function requestTranscriptThenExit(reason) {
+    // 已经在退了，不重复
+    if (window.__exiting) return;
+    window.__exiting = true;
+
+    showToast('📜 正在保存面试记录...');
+
+    // 2 秒兜底：网络异常也别卡住用户
+    const safetyTimer = setTimeout(() => {
+      console.warn('⚠️ Transcript 等待超时，直接退出');
+      cleanupAndExit(reason);
+    }, 2000);
+    window.__exitSafetyTimer = safetyTimer;
+
+    try {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({ event: 'USER_END' }));
+      } else {
+        // WS 都没了，直接退
+        clearTimeout(safetyTimer);
+        cleanupAndExit(reason);
+      }
+    } catch (_) {
+      clearTimeout(safetyTimer);
+      cleanupAndExit(reason);
+    }
+
+    // 真正的退出由 socket.onmessage 收到 [TRANSCRIPT] 后触发
+    window.__exitReason = reason;
+  }
+
+  /**
+   * 收到 transcript 后再等反馈最多 15s。超时也走，EndPage 会自动显示"反馈生成中"占位。
+   * 关键点：这段时间必须保持 WebSocket 开着，所以不能在这里 close socket。
+   */
+  function startFeedbackWait() {
+    if (window.__waitingFeedback) return;
+    window.__waitingFeedback = true;
+    showToast('🧠 正在生成面试反馈...（最多 15 秒）');
+
+    window.__feedbackTimer = setTimeout(() => {
+      console.warn('⚠️ Feedback 等待超时，先退出，EndPage 会继续轮询或显示占位');
+      cleanupAndExit(window.__exitReason || '会议已结束');
+    }, 15000);
+  }
+
+  /**
+   * 彻底清理一切资源后跳转。
+   * 这是 endMeeting() / [COMMAND]:END_INTERVIEW 的统一出口。
+   */
+  function cleanupAndExit(reason) {
+    console.log('🧹 [清理] 开始释放资源：' + reason);
+
+    // 1) 立刻停掉所有正在播放的 AI 语音 <audio>（这是"退出后还在说话"的元凶）
+    try {
+      // 先把流式队列清掉，避免已入队但未启动的 chunk 到时又自行 start()
+      resetUtteranceQueue();
+      activeAudios.forEach(a => {
+        try { a.onended = null; a.pause(); a.src = ''; a.load(); } catch (_) {}
+      });
+      activeAudios = [];
+      // 兜底：把页面上残留的 <audio> 元素也停掉
+      document.querySelectorAll('audio').forEach(a => {
+        try { a.pause(); a.src = ''; } catch (_) {}
+      });
+    } catch (_) {}
+
+    // 2) 关 WebSocket，避免后端继续发 [AUDIO]
+    try {
+      if (socket) {
+        socket.onmessage = null;
+        socket.onclose = null;
+        if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+          socket.close(1000, 'user_left');
+        }
+      }
+    } catch (_) {}
+
+    // 3) 停麦克风采集 + 关 AudioContext，避免继续往后端推音频
+    try {
+      if (processor) { processor.disconnect(); processor.onaudioprocess = null; }
+      if (input) input.disconnect();
+      if (audioContext && audioContext.state !== 'closed') audioContext.close();
+      if (audioCtx && audioCtx.state !== 'closed') { try { audioCtx.close(); } catch (_) {} }
+      audioCtx = null;
+      // 停掉麦克风 stream，释放系统级"录音中"指示器
+      if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+      }
+    } catch (_) {}
+
+    // 4) 关摄像头
+    try {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+      }
+    } catch (_) {}
+
+    // 5) 跳到结束页（覆盖整页就再也回不来了）
+    setTimeout(() => {
+      window.location.href = 'EndPage.html';
+    }, 200);
+  }
+
+  // 切换聊天
+  function toggleChat() {
+    isChatOpen = !isChatOpen;
+    const chatPanel = document.getElementById('chatPanel');
+    if (!chatPanel) return;
+    if (isChatOpen) {
+      // 互斥：打开聊天时关闭参会者面板
+      const pp = document.getElementById('participantsPanel');
+      if (pp) pp.classList.remove('open');
+      isParticipantsOpen = false;
+      chatPanel.classList.add('open');
+    } else {
+      chatPanel.classList.remove('open');
+    }
+  }
+
+  // 切换参与者
+  function toggleParticipants() {
+    isParticipantsOpen = !isParticipantsOpen;
+    const participantsPanel = document.getElementById('participantsPanel');
+    if (!participantsPanel) return;
+    if (isParticipantsOpen) {
+      // 互斥：打开参会者时关闭聊天面板
+      const cp = document.getElementById('chatPanel');
+      if (cp) cp.classList.remove('open');
+      isChatOpen = false;
+      participantsPanel.classList.add('open');
+    } else {
+      participantsPanel.classList.remove('open');
+    }
+  }
+
+  // ============ WebSocket 和音频处理逻辑 ============
+  async function initAudioAndWebSocket() {
+    try {
+      console.log('🎤 初始化音频和 WebSocket...');
+
+      // 1. 获取麦克风权限（保存到全局 micStream，整场面试保活）
+      micStream = await acquireMicStream();
+      showToast('🎤 麦克风已启动');
+
+      // 2. 建立 WebSocket 连接
+      socket = new WebSocket(WS_URL);
+      socket.binaryType = "arraybuffer";
+
+      socket.onopen = () => {
+        console.log('✅ WebSocket 已连接');
+        showToast('✅ 已连接到面试官');
+        document.getElementById('topBar').style.opacity = '1';
+        document.getElementById('bottomBar').style.opacity = '1';
+        
+         // 💡 核心新增：一连上 WebSocket，立刻把填写的套餐和文书发给后端
+        const initData = {
+            event: "INIT", // 暗号：告诉后端这是初始化指令
+            interviewType: sessionStorage.getItem("interviewType") || "1v1",
+            personalStatement: sessionStorage.getItem("personalStatement") || "",
+            activityList: sessionStorage.getItem("activityList") || ""
+        };
+        
+        // 把 JSON 转成字符串发过去
+        socket.send(JSON.stringify(initData));
+        console.log("📤 已将文书资料发送给后台导播，等待生成面试大纲...");
+
+        // 3. 开始处理音频流
+        setupAudioProcessing(micStream);
+      };
+
+            socket.onmessage = (event) => {
+        const msg = event.data;
+        
+        if (msg.startsWith("[ASR]:")) {
+          // 字幕
+          const text = msg.substring(6);
+          console.log('👂 您说: ' + text);
+          
+        } else if (msg.startsWith("[AI]:")) {
+          // 🤖 解析新的文本格式: [AI]:角色名:内容
+          const parts = msg.split(":");
+          if (parts.length >= 3) {
+              const speaker = parts[1]; // 提取角色名
+              const prefix = "[AI]:" + speaker + ":";
+              const aiText = msg.substring(prefix.length); // 提取真正的文本
+              
+              console.log('🤖 ' + speaker + ': ' + aiText);
+              showToast('🤖 ' + speaker + ': ' + aiText.substring(0, 20) + '...');
+
+              // 🎬 主画面切到当前发言人
+              setMainSpeaker(speaker);
+          }
+          
+        } else if (msg.startsWith("[AUDIO]:")) {
+          // 🔊 旧协议（完整单句）：[AUDIO]:角色:Base64数据
+          //    新版后端只在内部降级路径里会走到这，保留兼容。
+          const parts = msg.split(":");
+          if (parts.length >= 3) {
+              const speaker = parts[1];
+              const prefix = "[AUDIO]:" + speaker + ":";
+              const base64Audio = msg.substring(prefix.length);
+              console.log('🔊 [兼容] 收到 [' + speaker + '] 的完整音频');
+              playAudio(base64Audio);
+          }
+        } else if (msg.startsWith("[UTTER_BEGIN]:")) {
+          // ✨ 协议：[UTTER_BEGIN]:speaker:delayMs:fullText
+          //   delayMs = 0 → 接力（等前一条播完），> 0 → 相对前一条起点 +delayMs 起播（允许 overlap）
+          const rest = msg.substring("[UTTER_BEGIN]:".length);
+          const first = rest.indexOf(":");
+          const second = rest.indexOf(":", first + 1);
+          let speaker = rest, delayMs = 0, previewText = "";
+          if (first > 0 && second > first) {
+            speaker = rest.substring(0, first);
+            delayMs = parseInt(rest.substring(first + 1, second), 10) || 0;
+            previewText = rest.substring(second + 1);
+          } else if (first > 0) {
+            speaker = rest.substring(0, first);
+            previewText = rest.substring(first + 1);
+          }
+          console.log('🎬 开始新发言: ' + speaker + ' delayMs=' + delayMs
+              + (previewText ? ' (' + previewText.substring(0, 30) + '...)' : ''));
+          beginUtterance(speaker, delayMs, previewText);
+        } else if (msg.startsWith("[AUDIO_CHUNK]:")) {
+          const rest = msg.substring("[AUDIO_CHUNK]:".length);
+          const first = rest.indexOf(":");
+          const second = rest.indexOf(":", first + 1);
+          if (first > 0 && second > first) {
+            const speaker = rest.substring(0, first);
+            const seq = parseInt(rest.substring(first + 1, second), 10);
+            const base64Audio = rest.substring(second + 1);
+            console.log('🔊 chunk recvTs=' + Date.now() + ' seq=' + seq + ' ' + speaker + ' 大小=' + base64Audio.length);
+            pushAudioChunk(speaker, seq, base64Audio);
+          }
+        } else if (msg.startsWith("[UTTER_END]:")) {
+          // ✨ 新协议：一段 AI 回复结束
+          const rest = msg.substring("[UTTER_END]:".length);
+          const idx = rest.indexOf(":");
+          const speaker = idx >= 0 ? rest.substring(0, idx) : rest;
+          const total = idx >= 0 ? parseInt(rest.substring(idx + 1), 10) : 0;
+          console.log('🎬 发言结束: ' + speaker + ' total=' + total);
+          endUtterance(speaker, total);
+        } else if (msg.startsWith("[TRANSCRIPT]:")) {
+          // 📜 后端把整场对话记录推过来了，存进 sessionStorage 给 EndPage 用
+          const transcriptJson = msg.substring("[TRANSCRIPT]:".length);
+          try {
+            sessionStorage.setItem("interviewTranscript", transcriptJson);
+            // 进入"等反馈"阶段时，先清掉上一场的旧反馈，免得 EndPage 拿错
+            sessionStorage.removeItem("interviewFeedback");
+            console.log("📜 已保存 transcript，长度=" + transcriptJson.length);
+          } catch (e) {
+            console.warn("⚠️ 保存 transcript 失败:", e);
+          }
+
+          // 如果是用户主动点的"结束会议"在等这条 → 不立刻退，再多等一会儿反馈
+          if (window.__exiting) {
+            if (window.__exitSafetyTimer) clearTimeout(window.__exitSafetyTimer);
+            startFeedbackWait();
+          }
+        } else if (msg.startsWith("[FEEDBACK]:")) {
+          // 🧠 反馈到了，存起来给 EndPage 用
+          const feedbackJson = msg.substring("[FEEDBACK]:".length);
+          try {
+            sessionStorage.setItem("interviewFeedback", feedbackJson);
+            console.log("🧠 已保存 feedback，长度=" + feedbackJson.length);
+          } catch (e) {
+            console.warn("⚠️ 保存 feedback 失败:", e);
+          }
+          // 如果用户正在等反馈才能退 → 立刻退
+          if (window.__waitingFeedback) {
+            if (window.__feedbackTimer) clearTimeout(window.__feedbackTimer);
+            cleanupAndExit(window.__exitReason || '会议已结束');
+          }
+        } else if (msg.startsWith("[COMMAND]:")) {
+    const command = msg.substring(10);
+    if (command === "END_INTERVIEW") {
+        // AI 宣布结束了
+        console.log("🎬 收到面试结束指令！");
+        showToast("面试已结束，正在退出...");
+
+        // 标记为退出中，让 transcript / feedback 帧能触发统一出口
+        window.__exiting = true;
+        window.__exitReason = '面试已结束';
+        // 延迟 5 秒等 AI 把最后那句 "Thank you" 的语音播完，
+        // 然后开始等反馈（如果届时已经到了，startFeedbackWait 会立刻退出）
+        setTimeout(() => {
+            if (sessionStorage.getItem("interviewFeedback")) {
+                cleanupAndExit('面试已结束');
+            } else {
+                startFeedbackWait();
+            }
+        }, 5000);
+    }
+}
+        
+      };
+
+      socket.onerror = (error) => {
+        console.error('❌ WebSocket 错误:', error);
+        showToast('❌ 连接错误');
+      };
+      
+      socket.onclose = () => {
+        console.log('--- WebSocket 已断开 ---');
+        showToast('⚠️ 连接已断开');
+      };
+
+    } catch (err) {
+      console.error('❌ 初始化失败:', err);
+      showToast('❌ 无法启动麦克风：' + micErrorHint(err));
+    }
+  }
+
+  // 设置音频处理
+  function setupAudioProcessing(stream) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    input = audioContext.createMediaStreamSource(stream);
+    
+    processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+    // ⚠️ 设计决定（拟真演技）：麦克风永远向后端推音频，
+    //    无论 UI 上"静音"按钮是什么状态。toggleMute 只是表演。
+    processor.onaudioprocess = (e) => {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        const inputData = e.inputBuffer.getChannelData(0);
+        const pcmData = convertFloat32ToInt16(inputData);
+        socket.send(pcmData);
+      }
+    };
+
+    input.connect(processor);
+    processor.connect(audioContext.destination);
+  }
+
+  // 数据转换
+  function convertFloat32ToInt16(buffer) {
+    let l = buffer.length;
+    let buf = new Int16Array(l);
+    while (l--) {
+      let s = Math.max(-1, Math.min(1, buffer[l]));
+      buf[l] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return buf.buffer;
+  }
+
+  // 播放音频
+  function playAudio(base64) {
+    try {
+      if (!base64 || base64.length === 0) {
+        console.error("❌ 音频数据为空！");
+        return;
+      }
+      
+      const audioDataUrl = "data:audio/mp3;base64," + base64;
+      const audio = new Audio(audioDataUrl);
+
+      // 加入跟踪列表：退出会议时能一次性停掉所有还在播的 AI 语音
+      activeAudios.push(audio);
+
+      audio.onplay = () => {
+        console.log("▶ 音频开始播放");
+      };
+
+      audio.onended = () => {
+        console.log("✓ 音频播放完毕");
+        // 播完就从列表里移掉，避免无限堆积
+        activeAudios = activeAudios.filter(a => a !== audio);
+      };
+
+      audio.onerror = (e) => {
+        console.error("❌ 音频播放错误:", audio.error);
+        activeAudios = activeAudios.filter(a => a !== audio);
+      };
+
+      let playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          console.error("❌ 播放被拒绝:", err);
+          activeAudios = activeAudios.filter(a => a !== audio);
+        });
+      }
+    } catch (err) {
+      console.error("❌ 音频处理异常:", err);
+    }
+  }
+
+  // ============ 页面初始化 ============
+  window.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 页面加载完成，立即启动面试连接...');
+
+    // 1. 先按套餐渲染会议室成员
+    renderInterviewCast();
+
+    // 2. 启动音频和 WebSocket
+    initAudioAndWebSocket();
+
+    // 3. 自动显示工具栏
+    setTimeout(() => {
+      document.getElementById('topBar').style.opacity = '1';
+      document.getElementById('bottomBar').style.opacity = '1';
+    }, 100);
+  });
+
+  // 禁用 Alt+V 快捷键的视频切换
+  // 保留键盘快捷键但添加特殊处理
+
+
+  // Send chat
+  function sendChat() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    const messages = document.getElementById('chatMessages');
+    const now = new Date();
+    const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+
+    const div = document.createElement('div');
+    div.className = 'chat-msg';
+    div.innerHTML = `
+      <div class="chat-msg-header">
+        <span class="chat-msg-sender" style="color:#a78bfa;">我</span>
+        <span class="chat-msg-time">${time}</span>
+      </div>
+      <div class="chat-msg-body">${msg}</div>
+    `;
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+    input.value = '';
+  }
+
+  // Send reaction
+  const emojis = ['👍', '👏', '😂', '❤️', '🎉', '😮'];
+  function sendReaction() {
+    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+    const el = document.createElement('div');
+    el.className = 'reaction-float';
+    el.textContent = emoji;
+    el.style.left = (Math.random() * 200 + 100) + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 2000);
+    showToast(`你发送了 ${emoji}`);
+  }
+
+  // Toggle view
+  function toggleView() {
+    showToast('视图切换');
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.altKey && e.key === 'a') {
+      e.preventDefault();
+      toggleMute();
+    }
+    if (e.altKey && e.key === 'v') {
+      e.preventDefault();
+      toggleVideo();
+    }
+    // Space to temporarily unmute (push-to-talk)
+    if (e.code === 'Space' && isMuted) {
+      e.preventDefault();
+      toggleMute();
+    }
+  });
+
+  document.addEventListener('keyup', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    // Space release re-mute (push-to-talk style - disabled for simplicity)
+  });
+</script>
+</body>
+</html>

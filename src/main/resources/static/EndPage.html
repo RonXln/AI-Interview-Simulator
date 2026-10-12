@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>面试反馈 · AI Interview</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --brand:        #4c84c4;
+      --brand-dark:   #2f6aaa;
+      --accent:       #667eea;
+      --good:         #2bbb6f;
+      --warn:         #e6a23c;
+      --bad:          #e04040;
+      --text:         #2d3a4b;
+      --text-mute:    #6b7a8c;
+      --line:         #e6ecf3;
+      --bg-soft:      #f5f8fc;
+    }
+
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #ffffff 0%, #4c84c4 100%);
+      background-attachment: fixed;
+      color: var(--text);
+      min-height: 100vh;
+      padding: 28px 24px 60px;
+    }
+
+    /* ================= 顶部品牌条 ================= */
+    .topbar {
+      max-width: 1200px;
+      margin: 0 auto 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #fff;
+    }
+    .topbar .brand {
+      display: flex; align-items: center; gap: 12px;
+      font-weight: 600; font-size: 16px;
+      letter-spacing: 0.2px;
+    }
+    .topbar .brand-logo {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: rgba(255,255,255,0.9);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--brand-dark); font-weight: 800;
+    }
+    .topbar .meta {
+      display: flex; gap: 14px; font-size: 13px; opacity: 0.92;
+    }
+    .topbar .meta span { white-space: nowrap; }
+
+    /* ================= 主卡片 ================= */
+    .shell {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.98);
+      border-radius: 16px;
+      box-shadow: 0 18px 50px rgba(20, 50, 90, 0.18);
+      overflow: hidden;
+    }
+
+    /* —— Hero（总评 + 分数）—— */
+    .hero {
+      padding: 28px 32px 24px;
+      border-bottom: 1px solid var(--line);
+      display: flex; gap: 28px; align-items: center;
+    }
+    .score-ring {
+      flex-shrink: 0;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: conic-gradient(var(--accent) 0deg, var(--line) 0deg);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+      transition: background 0.8s ease-out;
+    }
+    .score-ring::before {
+      content: '';
+      position: absolute;
+      inset: 8px;
+      background: #fff;
+      border-radius: 50%;
+    }
+    .score-ring .score-val {
+      position: relative;
+      font-size: 34px; font-weight: 700; color: var(--accent);
+      line-height: 1;
+    }
+    .score-ring .score-val small {
+      font-size: 13px; font-weight: 500; color: var(--text-mute);
+      display: block; margin-top: 4px; text-align: center;
+    }
+    .hero-text { flex: 1; }
+    .hero-text h1 {
+      font-size: 22px; font-weight: 700; margin-bottom: 8px; color: var(--text);
+    }
+    .hero-text .summary {
+      font-size: 14.5px; line-height: 1.65; color: var(--text-mute);
+      max-width: 700px;
+    }
+    .hero-badges {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 10px; font-size: 12px; font-weight: 500;
+      border-radius: 999px;
+    }
+    .badge-good { background: #e9f8ef; color: var(--good); }
+    .badge-bad  { background: #fdecec; color: var(--bad); }
+    .badge-warn { background: #fdf3e2; color: var(--warn); }
+
+    /* ================= 主体两栏 ================= */
+    .body {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 0;
+    }
+    .left {
+      border-right: 1px solid var(--line);
+      background: var(--bg-soft);
+      max-height: 78vh; overflow-y: auto;
+      padding: 18px 16px;
+    }
+    .right {
+      padding: 22px 28px;
+      max-height: 78vh; overflow-y: auto;
+    }
+
+    /* —— 时间线 —— */
+    .timeline-title {
+      font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-mute); margin: 4px 4px 10px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .timeline-title .count {
+      background: var(--line); color: var(--text-mute);
+      padding: 1px 8px; border-radius: 999px; font-size: 11px;
+      letter-spacing: 0;
+    }
+
+    .tl-entry {
+      position: relative;
+      padding: 10px 12px 10px 38px;
+      margin-bottom: 6px;
+      border-radius: 10px;
+      cursor: default;
+      transition: background 0.15s;
+    }
+    .tl-entry:hover { background: rgba(76,132,196,0.06); }
+    .tl-entry.highlight {
+      background: #fff3d6;
+      box-shadow: 0 0 0 2px var(--warn) inset;
+    }
+    .tl-entry .dot {
+      position: absolute; left: 14px; top: 16px;
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--brand);
+    }
+    .tl-entry.user .dot         { background: var(--accent); }
+    .tl-entry.interviewer .dot  { background: var(--brand); }
+    .tl-entry.peer .dot         { background: #9aa6b4; }
+    .tl-entry.system .dot       { background: #c9d2dd; }
+
+    .tl-entry .meta {
+      display: flex; gap: 8px; font-size: 11.5px;
+      color: var(--text-mute); margin-bottom: 4px;
+    }
+    .tl-entry .meta .who { font-weight: 600; color: var(--text); }
+    .tl-entry .content {
+      font-size: 13.5px; line-height: 1.55; color: var(--text);
+      word-break: break-word;
+    }
+    .tl-entry.system .content { color: var(--text-mute); font-style: italic; font-size: 12px; }
+
+    /* ================= 右栏分块 ================= */
+    .section {
+      margin-bottom: 22px;
+    }
+    .section-head {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 700; color: var(--text);
+      margin-bottom: 12px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--line);
+    }
+    .section-head .ico {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: var(--accent); color: #fff;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+    .section p {
+      font-size: 13.5px; line-height: 1.7; color: var(--text);
+    }
+    .section p + p { margin-top: 8px; }
+
+    /* 整体表现 */
+    .lists { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+    .list-card {
+      background: var(--bg-soft);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .list-card h4 {
+      font-size: 12.5px; font-weight: 700; margin-bottom: 8px;
+      color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .list-card.good h4 { color: var(--good); }
+    .list-card.bad  h4 { color: var(--bad);  }
+    .list-card ul { list-style: none; padding: 0; }
+    .list-card li {
+      font-size: 13px; line-height: 1.6; color: var(--text);
+      padding: 4px 0 4px 16px; position: relative;
+    }
+    .list-card.good li::before {
+      content: '✓'; position: absolute; left: 0; color: var(--good); font-weight: 700;
+    }
+    .list-card.bad li::before {
+      content: '!'; position: absolute; left: 2px; color: var(--bad); font-weight: 700;
+    }
+
+    /* 语言表现网格 */
+    .lang-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .lang-cell {
+      background: var(--bg-soft);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .lang-cell .label {
+      font-size: 11.5px; font-weight: 700; color: var(--text-mute);
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .lang-cell .val { font-size: 13.5px; line-height: 1.6; color: var(--text); }
+
+    /* 改进建议卡片 */
+    .improve-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    .improve-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(76,132,196,0.12);
+      border-color: var(--accent);
+    }
+    .improve-card .hd {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .improve-card .stage {
+      font-size: 12px; font-weight: 700; color: var(--accent);
+      background: #eef2ff; padding: 3px 10px; border-radius: 999px;
+    }
+    .improve-card .ts {
+      font-size: 11.5px; color: var(--text-mute); font-variant-numeric: tabular-nums;
+    }
+    .improve-card .row {
+      font-size: 13px; line-height: 1.6; margin-top: 6px;
+    }
+    .improve-card .row .tag {
+      display: inline-block; min-width: 76px;
+      font-size: 11px; font-weight: 700; color: var(--text-mute);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      vertical-align: top;
+    }
+    .improve-card .row.trigger    .tag { color: var(--brand); }
+    .improve-card .row.your-reply .tag { color: var(--bad); }
+    .improve-card .row.better     .tag { color: var(--good); }
+    .improve-card .row.rationale  .tag { color: var(--text-mute); }
+    .improve-card .text { display: inline; color: var(--text); }
+    .improve-card .row.your-reply .text { color: #8a4040; }
+    .improve-card .row.better .text { font-weight: 500; }
+
+    /* 加载占位 / 空状态 */
+    .placeholder {
+      padding: 28px;
+      text-align: center;
+      color: var(--text-mute);
+      font-size: 13.5px;
+      background: var(--bg-soft);
+      border-radius: 12px;
+      border: 1px dashed var(--line);
+    }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 3px solid var(--line);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 底部按钮 */
+    .footer {
+      padding: 20px 28px;
+      border-top: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 12px; background: #fff;
+    }
+    .footer .tip {
+      font-size: 12.5px; color: var(--text-mute);
+    }
+    .btn {
+      border: none; cursor: pointer;
+      padding: 11px 22px;
+      font-size: 14px; font-weight: 600;
+      border-radius: 10px;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent); color: #fff;
+      box-shadow: 0 6px 16px rgba(102,126,234,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(102,126,234,0.4); }
+    .btn-ghost {
+      background: transparent; color: var(--text-mute);
+      border: 1px solid var(--line);
+    }
+    .btn-ghost:hover { background: var(--bg-soft); color: var(--text); }
+
+    /* —— 响应式 —— */
+    @media (max-width: 900px) {
+      .body { grid-template-columns: 1fr; }
+      .left { border-right: none; border-bottom: 1px solid var(--line); max-height: 40vh; }
+      .right { max-height: none; }
+      .hero { flex-direction: column; text-align: center; }
+      .lists, .lang-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============== 顶部品牌条 ============== -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-logo">P</div>
+      <span>Periagoge · AI Interview</span>
+    </div>
+    <div class="meta">
+      <span id="metaDuration">⏱ 总时长 --:--</span>
+      <span id="metaUtterances">💬 你发言 -- 次</span>
+      <span id="metaPace">🎙 语速 -- WPM</span>
+    </div>
+  </div>
+
+  <!-- ============== 主卡片 ============== -->
+  <div class="shell">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="score-ring" id="scoreRing">
+        <div class="score-val" id="scoreVal">
+          --
+          <small>综合评分</small>
+        </div>
+      </div>
+      <div class="hero-text">
+        <h1 id="heroTitle">正在生成面试反馈...</h1>
+        <div class="summary" id="heroSummary">分析你的对话内容、语速节奏与表达策略，请稍候。</div>
+        <div class="hero-badges" id="heroBadges"></div>
+      </div>
+    </div>
+
+    <!-- 主体 -->
+    <div class="body">
+
+      <!-- 左：时间线 -->
+      <div class="left">
+        <div class="timeline-title">
+          <span>📜 面试时间线</span>
+          <span class="count" id="tlCount">0</span>
+        </div>
+        <div id="timeline">
+          <div class="placeholder">
+            <div class="spinner"></div>
+            正在加载对话记录...
+          </div>
+        </div>
+      </div>
+
+      <!-- 右：反馈 -->
+      <div class="right">
+
+        <div class="section">
+          <div class="section-head"><span class="ico">📝</span> 整场复盘</div>
+          <div id="recap"><div class="placeholder"><div class="spinner"></div>反馈生成中...</div></div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span class="ico">🎯</span> 整体表现</div>
+          <div class="lists" id="overallLists" style="display:none;">
+            <div class="list-card good">
+              <h4>亮点</h4>
+              <ul id="strengthsList"></ul>
+            </div>
+            <div class="list-card bad">
+              <h4>待改进</h4>
+              <ul id="weaknessesList"></ul>
+            </div>
+          </div>
+          <div id="overallPlaceholder" class="placeholder">反馈生成中...</div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span class="ico">🗣</span> 语言表现</div>
+          <div class="lang-grid" id="langGrid" style="display:none;">
+            <div class="lang-cell"><div class="label">用词与表达</div><div class="val" id="langLanguage">—</div></div>
+            <div class="lang-cell"><div class="label">语速</div><div class="val" id="langPace">—</div></div>
+            <div class="lang-cell"><div class="label">节奏</div><div class="val" id="langRhythm">—</div></div>
+            <div class="lang-cell"><div class="label">口头禅</div><div class="val" id="langFiller">—</div></div>
+          </div>
+          <div id="langPlaceholder" class="placeholder">反馈生成中...</div>
+        </div>
+
+        <div class="section">
+          <div class="section-head"><span class="ico">💡</span> 改进建议（点击可定位到对话时刻）</div>
+          <div id="improvements">
+            <div class="placeholder">反馈生成中...</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 底部按钮 -->
+    <div class="footer">
+      <div class="tip" id="footerTip">本次面试数据仅保存在你当前的浏览器标签中，关闭即清除。</div>
+      <div>
+        <button class="btn btn-ghost" onclick="downloadJson()">下载反馈 JSON</button>
+        <button class="btn btn-primary" onclick="goHome()">再来一次</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // =========================================================
+    // 1) 读数据
+    // =========================================================
+    const transcript = safeParse(sessionStorage.getItem("interviewTranscript"));
+    let feedback     = safeParse(sessionStorage.getItem("interviewFeedback"));
+
+    function safeParse(s) {
+      if (!s) return null;
+      try { return JSON.parse(s); } catch (e) { console.warn(e); return null; }
+    }
+
+    // =========================================================
+    // 2) Transcript 渲染（左侧时间线 + 顶部 meta）
+    // =========================================================
+    function renderTranscript() {
+      if (!transcript) {
+        document.getElementById('timeline').innerHTML =
+          '<div class="placeholder">未找到面试记录，可能是直接打开了本页面。</div>';
+        return;
+      }
+
+      // —— 顶部 meta —— 
+      const stats = transcript.userStats || {};
+      document.getElementById('metaDuration').textContent =
+        '⏱ 总时长 ' + fmtTime(transcript.totalDurationMs);
+      document.getElementById('metaUtterances').textContent =
+        '💬 你发言 ' + (stats.totalUtterances || 0) + ' 次';
+      document.getElementById('metaPace').textContent =
+        '🎙 语速 ' + (stats.wordsPerMinute || 0) + ' WPM';
+
+      // —— 时间线 —— 
+      const tl = document.getElementById('timeline');
+      const entries = transcript.entries || [];
+      document.getElementById('tlCount').textContent = entries.length;
+
+      if (entries.length === 0) {
+        tl.innerHTML = '<div class="placeholder">这场面试还没有任何对话记录。</div>';
+        return;
+      }
+
+      tl.innerHTML = '';
+      entries.forEach(e => {
+        const div = document.createElement('div');
+        div.className = 'tl-entry ' + roleClass(e.role);
+        div.dataset.ms = e.relativeMs;
+        div.id = 'tl-' + e.relativeMs;
+
+        const speakerLabel = e.role === 'USER' ? '你'
+                          : (e.role === 'SYSTEM' ? '系统' : e.speaker);
+
+        div.innerHTML =
+          '<div class="dot"></div>' +
+          '<div class="meta"><span class="who">' + escapeHtml(speakerLabel) + '</span>' +
+          '<span>' + fmtTime(e.relativeMs) + '</span></div>' +
+          '<div class="content">' + escapeHtml(e.content) + '</div>';
+        tl.appendChild(div);
+      });
+    }
+
+    function roleClass(role) {
+      switch (role) {
+        case 'USER':            return 'user';
+        case 'INTERVIEWER':     return 'interviewer';
+        case 'PEER_CANDIDATE':  return 'peer';
+        case 'SYSTEM':          return 'system';
+        default:                return '';
+      }
+    }
+
+    // =========================================================
+    // 3) Feedback 渲染
+    // =========================================================
+    function renderFeedback() {
+      if (!feedback) {
+        // 反馈未到 —— 进入轮询模式
+        startFeedbackPolling();
+        return;
+      }
+
+      const overall = feedback.overallPerformance || {};
+      const lang    = feedback.languagePerformance || {};
+      const improves = feedback.improvements || [];
+
+      // Hero
+      const score = Number(overall.score) || 0;
+      document.getElementById('scoreVal').innerHTML =
+        score + '<small>综合评分</small>';
+      document.getElementById('scoreRing').style.background =
+        'conic-gradient(' + scoreColor(score) + ' ' + (score * 3.6) + 'deg, var(--line) ' + (score * 3.6) + 'deg)';
+      document.getElementById('scoreVal').style.color = scoreColor(score);
+
+      document.getElementById('heroTitle').textContent = '你的面试反馈已生成';
+      document.getElementById('heroSummary').textContent = overall.summary || '';
+
+      const badges = document.getElementById('heroBadges');
+      badges.innerHTML = '';
+      (overall.strengths || []).slice(0, 2).forEach(s => {
+        const b = document.createElement('span');
+        b.className = 'badge badge-good';
+        b.textContent = '✓ ' + truncate(s, 14);
+        badges.appendChild(b);
+      });
+      (overall.weaknesses || []).slice(0, 2).forEach(s => {
+        const b = document.createElement('span');
+        b.className = 'badge badge-bad';
+        b.textContent = '! ' + truncate(s, 14);
+        badges.appendChild(b);
+      });
+
+      // 复盘
+      document.getElementById('recap').innerHTML =
+        '<p>' + escapeHtml(feedback.recap || '暂无') + '</p>';
+
+      // 整体表现 list
+      const strengthsUl = document.getElementById('strengthsList');
+      const weaknessesUl = document.getElementById('weaknessesList');
+      strengthsUl.innerHTML  = (overall.strengths  || []).map(x => '<li>' + escapeHtml(x) + '</li>').join('') || '<li>未提及</li>';
+      weaknessesUl.innerHTML = (overall.weaknesses || []).map(x => '<li>' + escapeHtml(x) + '</li>').join('') || '<li>未提及</li>';
+      document.getElementById('overallPlaceholder').style.display = 'none';
+      document.getElementById('overallLists').style.display = 'grid';
+
+      // 语言表现
+      document.getElementById('langLanguage').textContent = lang.language || '—';
+      document.getElementById('langPace').textContent     = lang.pace     || '—';
+      document.getElementById('langRhythm').textContent   = lang.rhythm   || '—';
+      document.getElementById('langFiller').textContent   = lang.fillerWords || '—';
+      document.getElementById('langPlaceholder').style.display = 'none';
+      document.getElementById('langGrid').style.display = 'grid';
+
+      // 改进建议
+      const imp = document.getElementById('improvements');
+      if (improves.length === 0) {
+        imp.innerHTML = '<div class="placeholder">本次面试没有特别需要改进的点。</div>';
+      } else {
+        imp.innerHTML = '';
+        improves.forEach((it, idx) => {
+          const card = document.createElement('div');
+          card.className = 'improve-card';
+          card.onclick = () => jumpToTimeline(it.atMs);
+          card.innerHTML =
+            '<div class="hd">' +
+              '<span class="stage">' + escapeHtml(it.stage || ('建议 ' + (idx + 1))) + '</span>' +
+              '<span class="ts">⏱ ' + fmtTime(it.atMs) + '</span>' +
+            '</div>' +
+            '<div class="row trigger">'    + '<span class="tag">触发</span> <span class="text">' + escapeHtml(it.trigger || '') + '</span></div>' +
+            '<div class="row your-reply">' + '<span class="tag">你的回答</span> <span class="text">' + escapeHtml(it.yourReply || '') + '</span></div>' +
+            '<div class="row better">'    + '<span class="tag">建议</span> <span class="text">' + escapeHtml(it.betterApproach || '') + '</span></div>' +
+            '<div class="row rationale">' + '<span class="tag">为什么</span> <span class="text">' + escapeHtml(it.rationale || '') + '</span></div>';
+          imp.appendChild(card);
+        });
+      }
+    }
+
+    function scoreColor(score) {
+      if (score >= 80) return 'var(--good)';
+      if (score >= 60) return 'var(--accent)';
+      if (score >= 40) return 'var(--warn)';
+      return 'var(--bad)';
+    }
+
+    // =========================================================
+    // 4) 交互：点击建议卡片定位时间线
+    // =========================================================
+    function jumpToTimeline(atMs) {
+      if (atMs == null) return;
+      // 找最接近的一条
+      const entries = (transcript && transcript.entries) || [];
+      if (!entries.length) return;
+      let best = entries[0];
+      let bestDiff = Math.abs(best.relativeMs - atMs);
+      for (const e of entries) {
+        const d = Math.abs(e.relativeMs - atMs);
+        if (d < bestDiff) { best = e; bestDiff = d; }
+      }
+      const el = document.getElementById('tl-' + best.relativeMs);
+      if (el) {
+        // 清除其它高亮
+        document.querySelectorAll('.tl-entry.highlight').forEach(n => n.classList.remove('highlight'));
+        el.classList.add('highlight');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => el.classList.remove('highlight'), 3000);
+      }
+    }
+
+    // =========================================================
+    // 5) 反馈未到时的轮询：每 2s 检查一次 sessionStorage
+    //    （因为 zoomMeetingMockPage 在等不到反馈时也会强制跳转过来，
+    //      但部分场景反馈还可能在后端管线里走完后被推过来；
+    //      这里只是兜底，最多等 30s。）
+    // =========================================================
+    let pollCount = 0;
+    function startFeedbackPolling() {
+      const interval = setInterval(() => {
+        pollCount++;
+        const fresh = safeParse(sessionStorage.getItem("interviewFeedback"));
+        if (fresh) {
+          feedback = fresh;
+          clearInterval(interval);
+          renderFeedback();
+        } else if (pollCount > 15) {
+          // 30s 还没等到
+          clearInterval(interval);
+          showFeedbackFailure();
+        }
+      }, 2000);
+    }
+
+    function showFeedbackFailure() {
+      document.getElementById('heroTitle').textContent = '反馈暂时不可用';
+      document.getElementById('heroSummary').textContent =
+        '对话记录已完整保存在左侧。反馈生成超时，你可以稍后重试或直接复盘对话内容。';
+      ['recap', 'overallPlaceholder', 'langPlaceholder', 'improvements'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '<div class="placeholder">反馈生成超时</div>';
+      });
+    }
+
+    // =========================================================
+    // 6) 工具
+    // =========================================================
+    function fmtTime(ms) {
+      if (!ms || ms < 0) ms = 0;
+      const s = Math.floor(ms / 1000);
+      const m = Math.floor(s / 60);
+      const r = s % 60;
+      return String(m).padStart(2, '0') + ':' + String(r).padStart(2, '0');
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      return String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function truncate(s, n) {
+      if (!s) return '';
+      return s.length > n ? s.slice(0, n) + '…' : s;
+    }
+
+    // =========================================================
+    // 7) 底部按钮
+    // =========================================================
+    function downloadJson() {
+      const data = {
+        transcript: transcript,
+        feedback: feedback,
+        exportedAt: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'interview-feedback-' + Date.now() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function goHome() {
+      // 清掉本场数据，回到开始页
+      sessionStorage.removeItem('interviewTranscript');
+      sessionStorage.removeItem('interviewFeedback');
+      sessionStorage.removeItem('interviewType');
+      sessionStorage.removeItem('personalStatement');
+      sessionStorage.removeItem('activityList');
+      sessionStorage.removeItem('micAck');
+      window.location.href = 'StartPage.html';
+    }
+
+    // =========================================================
+    // 8) 启动
+    // =========================================================
+    renderTranscript();
+    renderFeedback();
+  </script>
+
+</body>
+</html>

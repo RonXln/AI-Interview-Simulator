@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 面试助手 - 开始</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #ffffff 0%, #4c84c4 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #fff;
+     
+    }
+
+    .container {
+      text-align: center;
+      padding: 20px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .image-section {
+      margin: 0 auto 25px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .image-section img {
+      max-width: 100%;
+      width: 500px;
+      height: auto;
+    }
+
+    .logo-section {
+      margin-bottom: 30px;
+    }
+
+    .title {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 20px;
+      line-height: 1.5;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .start-btn {
+      background: rgba(255, 255, 255, 0.95);
+      color: #667eea;
+      border: none;
+      padding: 16px 50px;
+      font-size: 17px;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      margin-bottom: 25px;
+    }
+
+    .start-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+      background: #fff;
+    }
+
+    .start-btn:active {
+      transform: translateY(0);
+    }
+
+    .info-box {
+     
+      margin-top : 0px;
+      padding: 18px 24px;
+      max-width: 450px;
+      margin-left: auto;      /* 左自动，配合右自动实现居中 */
+  margin-right: auto;
+    }
+
+    .info-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .info-text {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="image-section">
+    <img src="assets\logo-blanckBackground.png" alt="Demo Image">
+  </div>
+
+  <div class="logo-section">
+    <h1 class="title"></h1>
+    <p class="subtitle">欢迎体验由Periagoge提供的新一代留学准备服务！</p>
+  </div>
+
+  <button class="start-btn" onclick="goToSetup()">开始试用我们的最新模型</button>
+
+  <div class="info-box">
+    <div class="info-title">准备事项</div>
+    <div class="info-text">
+      确保麦克风可用<br>
+      找一个安静的环境<br>
+      准备好英文回答问题
+    </div>
+  </div>
+</div>
+
+<script>
+  function goToSetup() {
+    // 跳转到设置页面
+    window.location.href = 'Setup.html';
+  }
+</script>
+
+</body>
+</html>
