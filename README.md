@@ -10,6 +10,7 @@
 - 本地部署的辅助语音识别模型sherpa-onnx-v1.12.32
 
 它适合用于 AI 面试官 / AI 候选人 / 多角色模拟面试场景，支持单面或群面（小组面试）式对话体验。
+
 <img width="2728" height="1558" alt="fe00271b00cb27eac9e000e4edfa53b3" src="https://github.com/user-attachments/assets/c721159e-1837-4a13-9876-3cd2b50adf1a" />
 
 ## 项目概览
